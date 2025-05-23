@@ -1,0 +1,45 @@
+# Node modules and build outputs
+node_modules/
+dist/
+build/
+
+# Environment & config files
+.env
+.env.local
+.env.*.local
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS-specific
+*.swp
+*.swo
+
+# Tailwind / PostCSS cache
+.pnp/
+.pnp.js
+.cache/
+
+# PHP specific
+/vendor/             # if you ever use Composer
+*.log                # PHP error logs
+*.sqlite             # If you're testing with SQLite
+
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.code-workspace
+
+# API tokens or sensitive configs (optional safety)
+config/connect_db.php
+config/api_keys.php
+api/config/*
+
+shop-api/

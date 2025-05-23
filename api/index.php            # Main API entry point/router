@@ -1,0 +1,70 @@
+
+<?php
+// Main API entry point/router
+
+require_once __DIR__ . '/config/constants.php';
+require_once __DIR__ . '/../config/connect_db.php';
+require_once __DIR__ . '/controllers/ProductController.php';
+require_once __DIR__ . '/controllers/CartController.php';
+require_once __DIR__ . '/controllers/WishlistController.php';
+require_once __DIR__ . '/controllers/RatingController.php';
+require_once __DIR__ . '/services/Response.php';
+    
+header("Content-Type: application/json");
+
+// Get the request method
+$requestMethod = $_SERVER['REQUEST_METHOD'];
+
+// Parse the request URI to extract path components
+$fullUri = $_SERVER['REQUEST_URI'];
+
+// Remove query string if present
+if (strpos($fullUri, '?') !== false) {
+    $fullUri = substr($fullUri, 0, strpos($fullUri, '?'));
+}
+
+// Extract path components
+$pathComponents = explode('/', trim($fullUri, '/'));
+
+// Detect if we're in a subdirectory and find the API path components
+$apiFound = false;
+$apiIndex = 0;
+
+foreach ($pathComponents as $index => $component) {
+    if ($component === 'api') {
+        $apiFound = true;
+        $apiIndex = $index;
+        break;
+    }
+}
+
+if (!$apiFound) {
+    echo Response::error(404, 'API endpoint not found');
+    exit;
+}
+
+// Extract controller and action from the path
+$controllerName = isset($pathComponents[$apiIndex + 1]) ? $pathComponents[$apiIndex + 1] : null;
+$action = isset($pathComponents[$apiIndex + 2]) ? $pathComponents[$apiIndex + 2] : null;
+
+// Check if controller exists
+if ($controllerName) {
+    $controllerClassName = ucfirst($controllerName) . 'Controller';
+    
+    if (class_exists($controllerClassName)) {
+        $controller = new $controllerClassName();
+        
+        // Check if action exists
+        if ($action && method_exists($controller, $action)) {
+            // Execute the action
+            $controller->$action();
+        } else {
+           echo Response::error(404, 'Action not found');
+        }
+    } else {
+        echo Response::error(404, 'Controller not found');
+    }
+} else {
+    echo Response::error(404, 'Invalid API request');
+}
+?>
