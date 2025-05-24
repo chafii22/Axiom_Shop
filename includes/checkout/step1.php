@@ -150,10 +150,11 @@ if (isset($_SESSION['checkout']['shipping'])) {
                 if (isset($_SESSION['cart']) && count($_SESSION['cart']) > 0) {
                     echo '<ul class="list-group list-group-flush mb-3">';
                     
-                    foreach ($_SESSION['cart'] as $product_id => $quantity) {
+                    foreach ($_SESSION['cart'] as $product_id => $cartItem) {
                         // Get product details
                         $product = get_product_by_id($pdo, $product_id);
                         if ($product) {
+                            $quantity = $cartItem['quantity'];
                             $item_total = $product['price'] * $quantity;
                             $subtotal += $item_total;
                             

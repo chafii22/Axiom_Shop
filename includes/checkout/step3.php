@@ -41,10 +41,11 @@ $items = [];
 global $pdo;
 
 if (isset($_SESSION['cart']) && count($_SESSION['cart']) > 0) {
-    foreach ($_SESSION['cart'] as $product_id => $quantity) {
+    foreach ($_SESSION['cart'] as $product_id => $cartItem) {
         // Get product details
         $product = get_product_by_id($pdo, $product_id);
         if ($product) {
+            $quantity = $cartItem['quantity'];
             $item_total = $product['price'] * $quantity;
             $subtotal += $item_total;
             $items[] = [

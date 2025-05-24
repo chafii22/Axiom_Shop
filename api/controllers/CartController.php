@@ -73,7 +73,9 @@ class CartController {
             if ($result) {
                 $cartCount = $this->getCartCount($userId);
                 Response::success(['cart_count' => $cartCount], 'Item added to cart successfully');
-            } else {
+                
+
+                       } else {
                 Response::error('Failed to add item to cart');
             }
         } catch (PDOException $e) {

@@ -63,7 +63,7 @@ require_once 'config/connect_db.php';
                 <nav class="flex gap-6 max-sm:hidden">
                     <a href="home.php" class="text-base text-white hover:text-green-200 transition-colors">Home</a>
                     <a href="shop.php" class="text-base text-white hover:text-green-200 transition-colors">Shop</a>
-                    <a href="#about" class="text-base text-white hover:text-green-200 transition-colors">About Us</a>
+                    <a href="about.php" class="text-base text-white hover:text-green-200 transition-colors">About Us</a>
                 </nav>
 
             </header>

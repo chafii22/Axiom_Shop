@@ -240,6 +240,9 @@ function getProductRating($pdo, $product_id) {
     <?php include '../includes/header.php'; ?>
     
     <main class="container mx-auto px-4 py-8">
+        <a href="account.php" class="text-gray-600 hover:text-gray-800 mb-4 inline-block">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
         <h1 class="text-3xl font-bold mb-6">My Wishlist</h1>
         
         <div class="dashboard-container">
@@ -395,6 +398,7 @@ function getProductRating($pdo, $product_id) {
                     if (data.success) {
                         // Show success notification
                         showNotification(`${productName} added to cart!`, 'success');
+                        window.alert(data.message);
                         
                         // Update cart count if needed
                         if (typeof updateCartCounter === 'function') {
@@ -402,6 +406,7 @@ function getProductRating($pdo, $product_id) {
                         }
                     } else {
                         showNotification('Failed to add item to cart', 'error');
+                        console.log(data.message);
                     }
                 })
                 .catch(error => {

@@ -15,6 +15,24 @@ foreach ($cartItems as $item) {
     $total_price += $item['price'] * $item['quantity'];
 }
 
+// Ensure cart data is in session
+if (!empty($cartItems)) {
+    if (!isset($_SESSION['cart'])) {
+        $_SESSION['cart'] = [];
+    }
+    
+    // Populate session cart with database cart items
+    foreach ($cartItems as $item) {
+        $_SESSION['cart'][$item['product_id']] = [
+            'product_id' => $item['product_id'],
+            'quantity' => $item['quantity'],
+            'price' => $item['price']
+        ];
+    }
+    
+    error_log('Updated SESSION cart: ' . print_r($_SESSION['cart'], true));
+}
+
 // Set page variables
 $current_page = 'cart';
 $base_url = '';
@@ -237,7 +255,7 @@ $base_url = '';
                         <i class="fas fa-arrow-left mr-2"></i> Continue Shopping
                     </a>
                     <button id="checkout-btn" class="checkout-btn">
-                        Proceed to Checkout <i class="fas fa-arrow-right ml-2"></i>
+                        <i class="fas fa-arrow-right ml-2"></i><a href="checkout.php" class="checkout-btn" id="checkout-btn">Proceed to Checkout</a>
                     </button>
                 </div>
             </div>

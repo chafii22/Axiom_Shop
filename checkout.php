@@ -12,6 +12,8 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
+error_log('SESSION DATA: '. print_r($_SESSION, true));
+
 // Check if cart is empty, redirect to cart page if it is
 if (!isset($_SESSION['cart']) || count($_SESSION['cart']) === 0) {
     header('Location: cart.php');
@@ -89,6 +91,7 @@ $page_title = 'Checkout - ' . $checkout_steps[$current_step];
             // Include the appropriate step content based on current step
             $step_file = 'includes/checkout/step' . $current_step . '.php';
             if (file_exists($step_file)) {
+                echo "<!-- loading step file: $step_file -->";
                 include $step_file;
             } else {
                 // Fallback content if step file doesn't exist
@@ -366,6 +369,8 @@ $page_title = 'Checkout - ' . $checkout_steps[$current_step];
         // Add click event listener to all navigational links
         links.forEach(link => {
             link.addEventListener("click", function(e) {
+                if(link.closest('form')) return;
+
                 e.preventDefault();
                 const destination = this.getAttribute("href");
                 
@@ -382,11 +387,20 @@ $page_title = 'Checkout - ' . $checkout_steps[$current_step];
                 };
             });
         });
+
+        // Disable beforeunload for form submissions
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function() {
+                window.onbeforeunload = null;
+            });
+        });
         
         // Also intercept browser back/forward buttons
         window.addEventListener('beforeunload', function(e) {
-            // Cancel the event and show confirmation dialog
-            e.preventDefault();
+            if (document.activeElement && document.activeElement.type === 'submit') {
+                return undefined;
+            }
             // Chrome requires returnValue to be set
             e.returnValue = '';
             return 'You are in the middle of checkout. Your progress will not be saved if you leave now.';
