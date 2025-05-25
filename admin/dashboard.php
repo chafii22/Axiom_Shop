@@ -3,26 +3,80 @@
 // Start session
 session_start();
 
+// Include database connection first
+require_once '../config/connect_db.php';
+
+// Now check for supervisor status
+$is_supervisor = false;
+if (isset($_SESSION['is_supervisor']) && $_SESSION['is_supervisor'] === true) {
+    $is_supervisor = true;
+} elseif (isset($_SESSION['admin_id'])) {
+    $stmt = $pdo->prepare("SELECT is_supervisor FROM users WHERE id = ?");
+    $stmt->execute([$_SESSION['admin_id']]);
+    $user = $stmt->fetch();
+    $is_supervisor = ($user && $user['is_supervisor'] == 1);
+    
+    // Update the session if needed
+    if ($is_supervisor) {
+        $_SESSION['is_supervisor'] = true;
+    }
+}
+
 // Check for admin authorization
-if (!isset($_SESSION['admin_id'])) {
+if (!isset($_SESSION['admin_id']) && !isset($_SESSION['is_supervisor'])) {
     header("Location: ../auth/login.php");
     exit();
 }
 
-// Include database connection
-require_once '../config/connect_db.php';
+// Fetch user data - handle both admin and supervisor cases
+$username = "";
+$email = "";
+$user_role = "Supervisor"; // Default role
 
-// Fetch admin user data
-$admin_id = $_SESSION['admin_id'];
-$stmt = $pdo->prepare("SELECT username, email FROM users WHERE id = ? AND is_admin = 1");
-$stmt->execute([$admin_id]);
-$admin = $stmt->fetch();
+if (isset($_SESSION['admin_id'])) {
+    $stmt = $pdo->prepare("SELECT username, email FROM users WHERE id = ?");
+    $stmt->execute([$_SESSION['admin_id']]);
+    $admin = $stmt->fetch();
+    
+    if ($admin) {
+        $username = $admin['username'];
+        $email = $admin['email'];
+        $user_role = "Administrator";
+    }
+} elseif (isset($_SESSION['user_id'])) {
+    $stmt = $pdo->prepare("SELECT username, email FROM users WHERE id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $user = $stmt->fetch();
+    
+    if ($user) {
+        $username = $user['username'];
+        $email = $user['email'];
+    }
+}
 
-if (!$admin) {
-    // If somehow the user is not an admin anymore
-    session_destroy();
-    header("Location: ../auth/login.php");
-    exit();
+// Initialize supervisor statistics variables
+$reportedCustomers = 0;
+$adminActivity = 0;
+
+// Only fetch these if supervisor is logged in
+if ($is_supervisor) {
+    // Get reported customers count
+    try {
+        $stmt = $pdo->query("SELECT COUNT(*) as reported FROM customer_reports WHERE status = 'pending'");
+        $reportedCustomers = $stmt->fetch(PDO::FETCH_ASSOC)['reported'] ?? 0;
+    } catch (PDOException $e) {
+        // Table might not exist yet
+        $reportedCustomers = 0;
+    }
+    
+    // Get admin activity count
+    try {
+        $stmt = $pdo->query("SELECT COUNT(*) as activity FROM admin_logs WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)");
+        $adminActivity = $stmt->fetch(PDO::FETCH_ASSOC)['activity'] ?? 0;
+    } catch (PDOException $e) {
+        // Table might not exist yet
+        $adminActivity = 0;
+    }
 }
 
 // Get stats data from database
@@ -245,15 +299,57 @@ $chartDataJson = json_encode($chartData ?: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                     <span>Dashboard</span>
                 </a>
                 
+                <?php if (!$is_supervisor): ?>
+                <!-- Admin-only menu items -->
                 <a href="shop-management.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
                     <i class="fas fa-shopping-bag w-5 text-center"></i>
                     <span>Shop Management</span>
                 </a>
                 
+                <a href="products.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-box w-5 text-center"></i>
+                    <span>Products</span>
+                </a>
+                
+                <a href="inventory.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-boxes w-5 text-center"></i>
+                    <span>Inventory</span>
+                </a>
+                
+                <a href="orders.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-shopping-cart w-5 text-center"></i>
+                    <span>Orders</span>
+                </a>
+                <?php endif; ?>
+                
+                <!-- Common items -->
                 <a href="customers.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
                     <i class="fas fa-users w-5 text-center"></i>
                     <span>Customers</span>
                 </a>
+        
+                <!-- Supervisor-specific items -->
+                <?php if ($is_supervisor): ?>
+                <a href="customer_reports.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-flag w-5 text-center"></i>
+                    <span>Customer Reports</span>
+                </a>
+                
+                <a href="admin_management.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-user-cog w-5 text-center"></i>
+                    <span>Admin Management</span>
+                </a>
+                
+                <a href="admin_logs.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-history w-5 text-center"></i>
+                    <span>Activity Logs</span>
+                </a>
+                
+                <a href="performance.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-chart-line w-5 text-center"></i>
+                    <span>Performance Metrics</span>
+                </a>
+                <?php endif; ?>
                 
                 <a href="messages.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
                     <i class="fas fa-comment-alt w-5 text-center"></i>
@@ -264,8 +360,9 @@ $chartDataJson = json_encode($chartData ?: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                     <i class="fas fa-cog w-5 text-center"></i>
                     <span>Settings</span>
                 </a>
-            </div>
 
+            </div>
+        
             <a href="../home.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
                     <i class="fas fa-home w-5 text-center"></i>
                     <span>Return to home</span>
@@ -294,13 +391,14 @@ $chartDataJson = json_encode($chartData ?: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                         <div class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></div>
                     </div>
                     
+                    <!-- In the top bar user display section -->
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                             <i class="fas fa-user"></i>
                         </div>
                         <div>
-                            <div class="font-semibold"><?= htmlspecialchars($admin['username']) ?></div>
-                            <div class="text-xs text-white/70">Administrator</div>
+                            <div class="font-semibold"><?= htmlspecialchars($username) ?></div>
+                            <div class="text-xs text-white/70"><?= htmlspecialchars($user_role) ?></div>
                         </div>
                     </div>
                 </div>
@@ -308,6 +406,72 @@ $chartDataJson = json_encode($chartData ?: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
             
             <!-- Stats Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <?php if ($is_supervisor): ?>
+                <!-- Supervisor Stats -->
+                <div class="glass-card p-6 rounded-xl stat-card">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="card-icon w-12 h-12 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-flag text-xl"></i>
+                        </div>
+                        <div class="text-xs font-semibold uppercase tracking-wider opacity-70">Reports</div>
+                    </div>
+                    <div class="text-3xl font-bold mb-1"><?= number_format($reportedCustomers) ?></div>
+                    <div class="text-sm opacity-70 flex items-center">
+                        <i class="fas fa-exclamation-circle mr-1"></i> Pending review
+                    </div>
+                </div>
+                
+                <div class="glass-card p-6 rounded-xl stat-card">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="card-icon w-12 h-12 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-shield text-xl"></i>
+                        </div>
+                        <div class="text-xs font-semibold uppercase tracking-wider opacity-70">Admin Activity</div>
+                    </div>
+                    <div class="text-3xl font-bold mb-1"><?= number_format($adminActivity) ?></div>
+                    <div class="text-sm opacity-70 flex items-center">
+                        <i class="fas fa-clock mr-1"></i> Past 7 days
+                    </div>
+                </div>
+                
+                <div class="glass-card p-6 rounded-xl stat-card">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="card-icon w-12 h-12 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-users-cog text-xl"></i>
+                        </div>
+                        <div class="text-xs font-semibold uppercase tracking-wider opacity-70">Admins</div>
+                    </div>
+                    <div class="text-3xl font-bold mb-1">
+                        <?php 
+                        $stmt = $pdo->query("SELECT COUNT(*) as admin_count FROM users WHERE is_admin = 1");
+                        echo number_format($stmt->fetch()['admin_count'] ?? 0); 
+                        ?>
+                    </div>
+                    <div class="text-sm opacity-70 flex items-center">
+                        <i class="fas fa-user-check mr-1"></i> Active administrators
+                    </div>
+                </div>
+                
+                <div class="glass-card p-6 rounded-xl stat-card">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="card-icon w-12 h-12 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-users text-xl"></i>
+                        </div>
+                        <div class="text-xs font-semibold uppercase tracking-wider opacity-70">Total Users</div>
+                    </div>
+                    <div class="text-3xl font-bold mb-1">
+                        <?php 
+                        $stmt = $pdo->query("SELECT COUNT(*) as user_count FROM users");
+                        echo number_format($stmt->fetch()['user_count'] ?? 0); 
+                        ?>
+                    </div>
+                    <div class="text-sm opacity-70 flex items-center">
+                        <i class="fas fa-user-plus mr-1"></i> Registered accounts
+                    </div>
+                </div>
+                
+                <?php else: ?>
+                <!-- Admin Stats -->
                 <div class="glass-card p-6 rounded-xl stat-card">
                     <div class="flex items-center gap-4 mb-4">
                         <div class="card-icon w-12 h-12 rounded-lg flex items-center justify-center">
@@ -359,10 +523,73 @@ $chartDataJson = json_encode($chartData ?: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                         <i class="fas fa-user-plus mr-1"></i> Last 30 days
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
+            
+            <!-- Supervisor Controls -->
+            <?php if ($is_supervisor): ?>
+            <div class="glass-card p-6 rounded-xl mb-8">
+                <h3 class="text-xl font-bold heading-font mb-4">Supervisor Controls</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-card bg-red-900/30 p-6 rounded-xl stat-card">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="card-icon w-12 h-12 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-flag text-xl"></i>
+                            </div>
+                            <div class="text-xs font-semibold uppercase tracking-wider opacity-70">Customer Reports</div>
+                        </div>
+                        <div class="text-3xl font-bold mb-1"><?= number_format($reportedCustomers) ?></div>
+                        <div class="text-sm opacity-70 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i> Pending review
+                        </div>
+                        <div class="mt-3">
+                            <a href="customer_reports.php" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg inline-block">
+                                View Reports
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card bg-blue-900/30 p-6 rounded-xl stat-card">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="card-icon w-12 h-12 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-user-shield text-xl"></i>
+                            </div>
+                            <div class="text-xs font-semibold uppercase tracking-wider opacity-70">Admin Activity</div>
+                        </div>
+                        <div class="text-3xl font-bold mb-1"><?= number_format($adminActivity) ?></div>
+                        <div class="text-sm opacity-70 flex items-center">
+                            <i class="fas fa-clock mr-1"></i> Past 7 days
+                        </div>
+                        <div class="mt-3">
+                            <a href="admin_logs.php" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg inline-block">
+                                View Logs
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
             
             <!-- Charts Section -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <?php if ($is_supervisor): ?>
+                <!-- Supervisor charts -->
+                <div class="glass-card p-6 rounded-xl lg:col-span-2">
+                    <h3 class="text-lg font-semibold mb-4 heading-font">User Activity Overview</h3>
+                    <div class="chart-container">
+                        <canvas id="userActivityChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="glass-card p-6 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-4 heading-font">User Distribution</h3>
+                    <div class="chart-container">
+                        <canvas id="userDistributionChart"></canvas>
+                    </div>
+                </div>
+                <?php else: ?>
+                <!-- Admin charts -->
                 <div class="glass-card p-6 rounded-xl lg:col-span-2">
                     <h3 class="text-lg font-semibold mb-4 heading-font">Revenue Overview</h3>
                     <div class="chart-container">
@@ -376,6 +603,7 @@ $chartDataJson = json_encode($chartData ?: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                         <canvas id="salesDistributionChart"></canvas>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
             
             <!-- Top Products Section -->
@@ -438,32 +666,106 @@ $chartDataJson = json_encode($chartData ?: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                 </div>
             </div>
             
-            <!-- Quick Actions -->
-            <div class="glass-card p-6 rounded-xl">
-                <h3 class="text-lg font-semibold heading-font mb-4">Quick Actions</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <a href="add-product.php" class="p-4 bg-white/10 hover:bg-white/20 transition rounded-lg flex flex-col items-center text-center">
-                        <i class="fas fa-plus-circle text-2xl mb-2"></i>
-                        <span>Add New Product</span>
-                    </a>
-                    <a href="pending-orders.php" class="p-4 bg-white/10 hover:bg-white/20 transition rounded-lg flex flex-col items-center text-center">
-                        <i class="fas fa-hourglass-half text-2xl mb-2"></i>
-                        <span>View Pending Orders</span>
-                    </a>
-                    <a href="inventory.php" class="p-4 bg-white/10 hover:bg-white/20 transition rounded-lg flex flex-col items-center text-center">
-                        <i class="fas fa-boxes text-2xl mb-2"></i>
-                        <span>Manage Inventory</span>
-                    </a>
-                    <a href="reports.php" class="p-4 bg-white/10 hover:bg-white/20 transition rounded-lg flex flex-col items-center text-center">
-                        <i class="fas fa-chart-bar text-2xl mb-2"></i>
-                        <span>Generate Reports</span>
-                    </a>
-                </div>
-            </div>
+            
         </div>
     </div>
 
     <script>
+        <?php if ($is_supervisor): ?>
+        // User Activity Chart
+        const userActivityCtx = document.getElementById('userActivityChart').getContext('2d');
+        const userActivityChart = new Chart(userActivityCtx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'User Logins',
+                    data: [45, 39, 53, 47, 54, 36, 41],
+                    borderColor: 'rgba(236, 72, 153, 0.8)',
+                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: 'rgba(236, 72, 153, 1)',
+                    pointRadius: 4
+                },
+                {
+                    label: 'Admin Actions',
+                    data: [25, 29, 23, 27, 24, 16, 21],
+                    borderColor: 'rgba(59, 130, 246, 0.8)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // User Distribution Chart
+        const userDistributionCtx = document.getElementById('userDistributionChart').getContext('2d');
+        const userDistributionChart = new Chart(userDistributionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Regular Users', 'Admins', 'Supervisors', 'Inactive'],
+                datasets: [{
+                    data: [75, 15, 5, 5],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)',
+                        'rgba(236, 72, 153, 0.7)',
+                        'rgba(139, 92, 246, 0.7)',
+                        'rgba(251, 146, 60, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(59, 130, 246, 1)',
+                        'rgba(236, 72, 153, 1)',
+                        'rgba(139, 92, 246, 1)',
+                        'rgba(251, 146, 60, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                size: 12
+                            },
+                            boxWidth: 12
+                        }
+                    }
+                }
+            }
+        });
+        <?php else: ?>
+        // Regular admin charts (your existing chart code)
         // Revenue Chart
         const revenueCtx = document.getElementById('revenueChart').getContext('2d');
         const revenueChart = new Chart(revenueCtx, {
@@ -551,6 +853,7 @@ $chartDataJson = json_encode($chartData ?: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                 }
             }
         });
+        <?php endif; ?>
     </script>
 </body>
 </html>

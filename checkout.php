@@ -354,8 +354,16 @@ $page_title = 'Checkout - ' . $checkout_steps[$current_step];
             color: rgba(0, 0, 0, 0.6) !important;
         }
 
+
         
-        
+                /* Make buttons larger on mobile */
+        @media (max-width: 576px) {
+          .btn, button, .nav-link, a.product-link {
+            min-height: 44px;
+            min-width: 44px;
+            padding: 12px 16px;
+          }
+        }
         
 
         

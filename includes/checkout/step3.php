@@ -521,6 +521,15 @@ $_SESSION['checkout']['items'] = $items;
         opacity: 1 !important;
     }
 
+        /* Make buttons larger on mobile */
+    @media (max-width: 576px) {
+      .btn, button, .nav-link, a.product-link {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 12px 16px;
+      }
+    }
+
 </style>
 
 <script>

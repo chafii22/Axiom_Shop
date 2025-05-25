@@ -2,7 +2,6 @@
 require '../config/connect_db.php';
 
 
-
 // Start session
 session_start();
 
@@ -21,6 +20,26 @@ if (!isset($_SESSION['csrf_token'])) {
 if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['login_attempts'] = 0;
     $_SESSION['last_attempt_time'] = time();
+}
+
+
+// Near the top of your file
+if (isset($_SESSION['is_supervisor']) && $_SESSION['is_supervisor'] === true) {
+    $is_supervisor = true;
+} else {
+    // Fallback to database check
+    $is_supervisor = false;
+    if (isset($_SESSION['admin_id'])) {
+        $stmt = $pdo->prepare("SELECT is_supervisor FROM users WHERE id = ?");
+        $stmt->execute([$_SESSION['admin_id']]);
+        $user = $stmt->fetch();
+        $is_supervisor = ($user && $user['is_supervisor'] == 1);
+        
+        // Update the session if needed
+        if ($is_supervisor) {
+            $_SESSION['is_supervisor'] = true;
+        }
+    }
 }
 
 // Initialize variables
@@ -49,7 +68,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$is_locked) {
         $error = "Invalid form submission.";
     } else {
         // Include database connection
-        require_once '../config/connect_db.php';
         
         $email = $_POST['email'];
         $password = $_POST['password'];
@@ -60,7 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$is_locked) {
         if (empty($email) || empty($password)) {
             $error = "Please fill in all fields";
         } else {
-            $stmt = $pdo->prepare("SELECT id, email, password, username, is_admin FROM users WHERE email = ?");
+            $stmt = $pdo->prepare("SELECT id, email, password, username, is_admin, is_supervisor FROM users WHERE email = ?");
             $stmt->execute([$email]);
             $user = $stmt->fetch();
             
@@ -79,9 +97,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$is_locked) {
                     $login_successful = true;
                     
                     // Check if user is admin
-                    if ($user['is_admin'] == 1) {
+                     if ($user['is_admin'] == 1) {
                         $_SESSION['admin_id'] = $user['id'];
-                    }
+
+                        // Log the admin login
+                        $stmt = $pdo->prepare("INSERT INTO admin_logs (user_id, action, details, created_at) VALUES (?, ?, ?, NOW())");
+                        $stmt->execute([$user['id'], 'login', 'Admin login from IP: ' . $_SERVER['REMOTE_ADDR']]);
+                     }
+                        // Check if user is a supervisor
+                     if ($user['is_supervisor'] == 1) {
+                        $_SESSION['is_supervisor'] = true;
+                     }
+                    
                     
                     // Set remember me cookie if checked
                     if ($remember_me) {
@@ -95,7 +122,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$is_locked) {
                     }
                     
                     // Redirect based on role
-                    if (isset($_SESSION['admin_id'])) {
+                    if (isset($_SESSION['admin_id']) || isset($_SESSION['is_supervisor'])) {
                         header("Location: ../admin/dashboard.php");
                     } else {
                         header("Location: ../home.php");

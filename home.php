@@ -7,7 +7,7 @@ require_once 'config/connect_db.php';
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Axiom - Fashion Future</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,12 +20,128 @@ require_once 'config/connect_db.php';
             font-family: 'incredible';
             src: url(assets/fonts/Incrediible-BF6814d5097d803.ttf) format('truetype');
         }
+
+        @media (max-width: 576px) {
+            body {
+                font-size: 16px; /* Base font size */
+            }
+            h1 {
+                font-size: 24px;
+            }
+            h2 {
+                font-size: 20px;
+            }
+
+            /* Fix scroll snap on mobile */
+            .snap-container {
+                scroll-snap-type: y proximity; /* Less strict snapping for mobile */
+            }
+            
+            /* Improve touch targets */
+            button, a {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            /* Proper padding for content */
+            .snap-section {
+                padding: 1rem;
+            }
+            
+            /* Adjust newsletter form for mobile */
+            form input, form button {
+                min-height: 48px;
+            }
+
+            
+    /* Improve newsletter form on small screens */
+            footer form {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            footer form input {
+                width: 100%;
+                margin-bottom: 0.75rem;
+            }
+            
+            footer form button {
+                width: 100%;
+                margin-left: 0;
+            }
+            
+            /* Better spacing in footer */
+            footer .flex-wrap > div {
+                margin-bottom: 2rem;
+            }
+            
+            /* Hero text on background image */
+            .flex-col.justify-center.items-center.pt-20 {
+                padding: 1rem !important;
+            }
+            
+            .flex-col.justify-center.items-center.pt-20 h1 {
+                font-size: 1.75rem !important;
+                line-height: 1.3 !important;
+            }
+        }
+             @media (min-width: 577px) and (max-width: 768px) {
+                /* Second section header */
+                .text-7xl.font-bold.tracking-widest {
+                    font-size: 3rem;
+                    line-height: 1.2;
+                }
+                
+                /* Adjust third section padding */
+                .flex-col.justify-center.items-center.pt-20 {
+                    padding: 2rem 1.5rem !important;
+                }
+            }
+
+        /* Optimize for landscape phones */
+            @media (max-width: 767px) and (orientation: landscape) {
+                .snap-section {
+                    min-height: 120vh; /* Allow scrolling in landscape */
+                }
+            }
+
+            @media (max-width: 480px) {
+                .snap-container {
+                    padding: 0.5rem !important;
+                }
+                
+                .snap-section {
+                    padding: 0.5rem !important;
+                }
+                
+                /* Fix product grid on very small screens */
+                .col-span-4, .col-span-8 {
+                    grid-column: span 12 / span 12;
+                }
+            }
+
+            @media (max-width: 380px) {
+                header {
+                    border-radius: 20px !important;
+                    padding-left: 0.75rem !important;
+                    padding-right: 0.75rem !important;
+                }
+                
+                h1.heading-font {
+                    font-size: 1rem;
+                }
+                
+                #mobileMenuToggle svg {
+                    width: 1.25rem;
+                    height: 1.25rem;
+                }
+            }
         
         body {
             font-family: 'Noto Sans', sans-serif;
             margin: 0;
             padding: 0;
-            overflow: hidden;
+            overflow-x: hidden;
         }
         .heading-font {
             font-family: 'Albra', sans-serif;
@@ -66,50 +182,63 @@ require_once 'config/connect_db.php';
                     <a href="about.php" class="text-base text-white hover:text-green-200 transition-colors">About Us</a>
                 </nav>
 
+                <button id="mobileMenuToggle" aria-label="Mobile menu" class="text-white cursor-pointer hidden max-sm:block">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+
             </header>
 
-            <button aria-label="Mobile menu" class="text-base text-white cursor-pointer max-sm:mx-auto sm:hidden">...</button>
+            <!-- Mobile menu - hidden by default -->
+            <div id="mobileMenu" class="hidden bg-[#0f172a] rounded-xl mb-6 py-4 px-6 sm:hidden">
+                <nav class="flex flex-col gap-4">
+                    <a href="home.php" class="text-base text-white hover:text-green-200 transition-colors py-2">Home</a>
+                    <a href="shop.php" class="text-base text-white hover:text-green-200 transition-colors py-2">Shop</a>
+                    <a href="about.php" class="text-base text-white hover:text-green-200 transition-colors py-2">About Us</a>
+                </nav>
+            </div>
 
-            <div class="flex gap-10 px-20 py-0 max-md:flex-col max-md:px-10 max-md:py-0 max-sm:px-6 max-sm:py-0">
+            <div class="flex gap-10 px-20 py-0 max-md:flex-col max-md:px-10 max-md:py-0 max-sm:px-4 max-sm:py-0">
                 <section class="flex-1">
-                    <h2 class="mb-6 text-7xl font-bold uppercase leading-[80px] text-slate-900 tracking-[2px] max-md:text-4xl max-md:leading-[60px] max-sm:text-3xl max-sm:leading-10 heading-font">
+                    <h2 class="mb-6 text-7xl font-bold uppercase leading-[80px] text-slate-900 tracking-[2px] max-md:text-4xl max-md:leading-[60px] max-sm:text-3xl max-sm:leading-10 max-sm:mb-4 heading-font">
                         Find Your Future Fashion Today
                     </h2>
-
-                    <p class="mb-14 text-base leading-6 max-w-[625px] text-neutral-600">
+            
+                    <p class="mb-14 text-base leading-6 max-w-[625px] text-neutral-600 max-sm:mb-8">
                         Dress our latest collection, curated for trendsetters seeking chic and timeless style. Elevate your wardrobe today!
                     </p>
-
-                    <div class="flex gap-4 mb-20 max-sm:flex-col">
-                        <button class="px-8 py-5 text-xl font-semibold text-white uppercase bg-[#0f172a] hover:bg-gray-800 transition-colors cursor-pointer rounded-[100px]">
+            
+                    <div class="flex gap-4 mb-20 max-sm:flex-col max-sm:mb-10">
+                        <button class="px-8 py-5 text-xl font-semibold text-white uppercase bg-[#0f172a] hover:bg-gray-800 transition-colors cursor-pointer rounded-[100px] max-sm:py-4">
                             Buy Now
                         </button>
-                        <button aria-label="Learn more" class="flex justify-center items-center w-16 h-16 bg-white hover:bg-gray-50 transition-colors rounded-full cursor-pointer">
+                        <button aria-label="Learn more" class="flex justify-center items-center w-16 h-16 bg-white hover:bg-gray-50 transition-colors rounded-full cursor-pointer max-sm:self-start">
                             <i class="ti ti-arrow-up-right text-xl text-slate-900">↗</i>
                         </button>
                     </div>
-
-                    <section class="flex gap-10 max-sm:flex-col max-sm:gap-6">
-                        <article class="text-center">
-                            <p class="text-5xl font-bold tracking-widest leading-[60px] text-neutral-800">20+</p>
-                            <p class="text-base uppercase text-neutral-600">Years Of experience</p>
+            
+                    <section class="flex gap-10 max-sm:gap-4 max-sm:flex-wrap">
+                        <article class="text-center max-sm:flex-1 max-sm:min-w-[130px]">
+                            <p class="text-5xl font-bold tracking-widest leading-[60px] text-neutral-800 max-sm:text-3xl max-sm:leading-10">20+</p>
+                            <p class="text-base uppercase text-neutral-600 max-sm:text-sm">Years Of experience</p>
                         </article>
-
-                        <article class="text-center">
-                            <p class="text-5xl font-bold tracking-widest leading-[60px] text-neutral-800">21K+</p>
-                            <p class="text-base uppercase text-neutral-600">Happy Customers</p>
+            
+                        <article class="text-center max-sm:flex-1 max-sm:min-w-[130px]">
+                            <p class="text-5xl font-bold tracking-widest leading-[60px] text-neutral-800 max-sm:text-3xl max-sm:leading-10">21K+</p>
+                            <p class="text-base uppercase text-neutral-600 max-sm:text-sm">Happy Customers</p>
                         </article>
-
-                        <article class="text-center">
-                            <p class="text-5xl font-bold tracking-widest leading-[60px] text-neutral-800">150+</p>
-                            <p class="text-base uppercase text-neutral-600">Product brand</p>
+            
+                        <article class="text-center max-sm:flex-1 max-sm:min-w-[130px]">
+                            <p class="text-5xl font-bold tracking-widest leading-[60px] text-neutral-800 max-sm:text-3xl max-sm:leading-10">150+</p>
+                            <p class="text-base uppercase text-neutral-600 max-sm:text-sm">Product brand</p>
                         </article>
                     </section>
                 </section>
-
-                <section class="relative flex-1 max-md:mt-10 max-sm:hidden">
-                    <div class="overflow-hidden rounded-3xl bg-neutral-400 h-[700px]">
-                        <img src="assets/background/faceMask2.jpg" alt="Fashion model" class="object-cover w-full h-full border-0 hover:scale-105  transition-transform duration-500">
+            
+                <section class="relative flex-1 max-md:mt-10">
+                    <div class="overflow-hidden rounded-3xl bg-neutral-400 h-[700px] max-sm:h-[400px] max-sm:mx-auto">
+                        <img src="assets/background/faceMask2.jpg" alt="Fashion model" class="object-cover w-full h-full border-0 hover:scale-105 transition-transform duration-500">
                     </div>
                 </section>
             </div>
@@ -121,21 +250,21 @@ require_once 'config/connect_db.php';
                                     linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px); 
                                     background-size: 50px 50px;"></div>
                                     
-                        <div class="flex flex-wrap justify-between items-center gap-4 w-full text-white">
-                            <div class="flex-1 text-center px-3">
-                                <h2 class="text-3xl md:text-4xl font-bold uppercase tracking-widest">Fashion Week</h2>
+                        <div class="flex flex-wrap justify-between items-center gap-6 w-full text-white max-sm:gap-4">
+                            <div class="flex-1 text-center px-3 min-w-[150px]">
+                                <h2 class="text-3xl md:text-4xl font-bold uppercase tracking-widest max-sm:text-xl max-sm:tracking-wide">Fashion Week</h2>
                             </div>
                             
                             <img src="assets/divider.png" alt="Divider" class="hidden md:block h-20 object-contain">
                             
-                            <div class="flex-1 text-center px-3">
-                                <h2 class="text-3xl md:text-4xl font-bold uppercase tracking-widest">Fashion Award</h2>
+                            <div class="flex-1 text-center px-3 min-w-[150px]">
+                                <h2 class="text-3xl md:text-4xl font-bold uppercase tracking-widest max-sm:text-xl max-sm:tracking-wide">Fashion Award</h2>
                             </div>
                             
                             <img src="assets/divider.png" alt="Divider" class="hidden md:block h-20 object-contain">
                             
-                            <div class="flex-1 text-center px-3">
-                                <h2 class="text-3xl md:text-4xl font-bold uppercase tracking-widest">Fashion Show</h2>
+                            <div class="flex-1 text-center px-3 min-w-[150px]">
+                                <h2 class="text-3xl md:text-4xl font-bold uppercase tracking-widest max-sm:text-xl max-sm:tracking-wide">Fashion Show</h2>
                             </div>
                         </div>
                     </section>
@@ -157,31 +286,31 @@ require_once 'config/connect_db.php';
                 </header>
         
                 <!-- New dynamic product grid -->
-                <div class="grid grid-cols-12 gap-6 mt-10">
-                    <!-- Featured large product - spans 6 columns -->
+                <div class="grid grid-cols-12 gap-6 mt-10 max-sm:gap-4">
+                    <!-- Featured large product - spans full width on mobile -->
                     <article class="col-span-4 row-span-2 bg-white rounded-2xl overflow-hidden shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl max-md:col-span-12">
-                        <div class="relative h-[800px] max-md:h-[500px]">
+                        <div class="relative h-[800px] max-md:h-[500px] max-sm:h-[400px]">
                             <img
                                 src="assets/hot_seller/bee.jpg"
                                 alt="Pink suit jacket"
                                 class="absolute inset-0 w-full h-full object-center object-cover"
                             />
-                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
+                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6 max-sm:p-4">
                                 <div class="flex justify-between items-end">
-                                    <h2 class="text-2xl font-bold text-white uppercase">
+                                    <h2 class="text-2xl font-bold text-white uppercase max-sm:text-xl">
                                         Pink suit jacket
                                     </h2>
-                                    <p class="text-4xl font-bold text-white">
+                                    <p class="text-4xl font-bold text-white max-sm:text-3xl">
                                         $105
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </article>
-        
-                    <!-- Medium product - spans 4 columns -->
+                
+                    <!-- Medium product - spans full width on mobile -->
                     <article class="col-span-8 bg-white rounded-2xl overflow-hidden shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl max-md:col-span-12">
-                        <div class="relative h-[380px] max-md:h-[400px]">
+                        <div class="relative h-[380px] max-md:h-[400px] max-sm:h-[350px]">
                             <img
                                 src="assets/hot_seller/VM8.jpg"
                                 alt="White hoodie"
@@ -189,21 +318,20 @@ require_once 'config/connect_db.php';
                             />
                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                                 <div class="flex justify-between items-end">
-                                    <h2 class="text-xl font-bold text-white uppercase">
+                                    <h2 class="text-xl font-bold text-white uppercase max-sm:text-lg">
                                         White hoodie
                                     </h2>
-                                    <p class="text-3xl font-bold text-white">
+                                    <p class="text-3xl font-bold text-white max-sm:text-2xl">
                                         $50
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </article>
-
-        
-                    <!-- Small product - spans 4 columns -->
-                    <article class="col-span-4 bg-white rounded-2xl overflow-hidden shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl max-md:col-span-12 max-md:col-start-1">
-                        <div class="relative h-[400px] max-md:h-[350px]">
+                
+                    <!-- Small products - span 6 columns each on small tablets -->
+                    <article class="col-span-4 bg-white rounded-2xl overflow-hidden shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl max-md:col-span-6 max-sm:col-span-12">
+                        <div class="relative h-[400px] max-md:h-[350px] max-sm:h-[320px]">
                             <img
                                 src="assets/hot_seller/shoeS4.jpg"
                                 alt="Blue cowboy hat"
@@ -211,20 +339,19 @@ require_once 'config/connect_db.php';
                             />
                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                                 <div class="flex justify-between items-end">
-                                    <h2 class="text-lg font-bold text-white uppercase">
+                                    <h2 class="text-lg font-bold text-white uppercase max-sm:text-base">
                                         Blue cowboy hat
                                     </h2>
-                                    <p class="text-2xl font-bold text-white">
+                                    <p class="text-2xl font-bold text-white max-sm:text-xl">
                                         $25
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </article>
-        
-                    <!-- Medium-small product - spans 4 columns -->
-                    <article class="col-span-4 bg-white rounded-2xl overflow-hidden shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl max-md:col-span-12">
-                        <div class="relative h-[400px] max-md:h-[350px]">
+                
+                    <article class="col-span-4 bg-white rounded-2xl overflow-hidden shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl max-md:col-span-6 max-sm:col-span-12">
+                        <div class="relative h-[400px] max-md:h-[350px] max-sm:h-[320px]">
                             <img
                                 src="assets/hot_seller/talonB4.jpg"
                                 alt="Black shirt"
@@ -232,10 +359,10 @@ require_once 'config/connect_db.php';
                             />
                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                                 <div class="flex justify-between items-end">
-                                    <h2 class="text-lg font-bold text-white uppercase">
+                                    <h2 class="text-lg font-bold text-white uppercase max-sm:text-base">
                                         Black shirt
                                     </h2>
-                                    <p class="text-2xl font-bold text-white">
+                                    <p class="text-2xl font-bold text-white max-sm:text-xl">
                                         $15
                                     </p>
                                 </div>
@@ -408,6 +535,31 @@ require_once 'config/connect_db.php';
     </main>
     
     <?php include 'sticky_nav.php'; ?>
+    <script>
+        // Mobile menu toggle functionality
+                document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+                    document.getElementById('mobileMenu').classList.toggle('hidden');
+                });
+
+                                // Add this to your existing script section
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Mobile menu toggle functionality
+                    document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+                        document.getElementById('mobileMenu').classList.toggle('hidden');
+                    });
+                    
+                    // Add active state for touch feedback
+                    const buttons = document.querySelectorAll('button, a');
+                    buttons.forEach(button => {
+                        button.addEventListener('touchstart', function() {
+                            this.classList.add('active-touch');
+                        });
+                        button.addEventListener('touchend', function() {
+                            this.classList.remove('active-touch');
+                        });
+                    });
+                });
+    </script>
 
 </body>
 </html>

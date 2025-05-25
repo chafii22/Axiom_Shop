@@ -1,8 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../models/Cart.php';
-require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../../config/connect_db.php';
+require( __DIR__ . '/response.php');
 
 class CartController {
     private $cartModel;

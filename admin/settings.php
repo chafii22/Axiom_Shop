@@ -1,10 +1,9 @@
-
 <?php
 // Start session
 session_start();
 
-// Check for admin authorization
-if (!isset($_SESSION['admin_id'])) {
+// Check for admin or supervisor authorization
+if (!isset($_SESSION['admin_id']) && !isset($_SESSION['is_supervisor'])) {
     header("Location: ../auth/login.php");
     exit();
 }
@@ -12,14 +11,19 @@ if (!isset($_SESSION['admin_id'])) {
 // Include database connection
 require_once '../config/connect_db.php';
 
-// Fetch admin user data
-$admin_id = $_SESSION['admin_id'];
-$stmt = $pdo->prepare("SELECT id, username, email FROM users WHERE id = ? AND is_admin = 1");
-$stmt->execute([$admin_id]);
-$admin = $stmt->fetch();
+// Determine if user is supervisor
+$is_supervisor = isset($_SESSION['is_supervisor']) && $_SESSION['is_supervisor'] === true;
 
-if (!$admin) {
-    // If somehow the user is not an admin anymore
+// Fetch user data
+$user_id = isset($_SESSION['admin_id']) ? $_SESSION['admin_id'] : $_SESSION['user_id'];
+$user_role = $is_supervisor ? "Supervisor" : "Administrator";
+
+$stmt = $pdo->prepare("SELECT id, username, email FROM users WHERE id = ?");
+$stmt->execute([$user_id]);
+$user_data = $stmt->fetch();
+
+if (!$user_data) {
+    // If somehow the user doesn't exist anymore
     session_destroy();
     header("Location: ../auth/login.php");
     exit();
@@ -35,7 +39,7 @@ if (isset($_POST['delete_account']) && isset($_POST['confirm_delete'])) {
     
     // Verify password first
     $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
-    $stmt->execute([$admin_id]);
+    $stmt->execute([$user_id]);
     $user = $stmt->fetch();
     
     if ($user && password_verify($password, $user['password'])) {
@@ -48,7 +52,7 @@ if (isset($_POST['delete_account']) && isset($_POST['confirm_delete'])) {
             
             // Finally delete the user
             $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-            $stmt->execute([$admin_id]);
+            $stmt->execute([$user_id]);
             
             // Commit transaction
             $pdo->commit();
@@ -81,7 +85,8 @@ if (isset($_POST['delete_account']) && isset($_POST['confirm_delete'])) {
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
+    <!-- Keep your existing styles -->
+     <style>
         @font-face {
             font-family: 'Space Grotesk';
             src: url(../assets/fonts/Incrediible-BF6814d5097d803.ttf) format('truetype');
@@ -193,7 +198,7 @@ if (isset($_POST['delete_account']) && isset($_POST['confirm_delete'])) {
 </head>
 <body class="text-white min-h-screen">
     <div class="flex min-h-screen">
-        <!-- Sidebar (same as dashboard) -->
+        <!-- Sidebar with role-based menu items -->
         <div class="glass-sidebar w-64 p-6 flex flex-col">
             <div class="flex items-center gap-3 mb-10 heading-font">
                 <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
@@ -208,21 +213,52 @@ if (isset($_POST['delete_account']) && isset($_POST['confirm_delete'])) {
                     <span>Dashboard</span>
                 </a>
                 
+                <?php if (!$is_supervisor): ?>
+                <!-- Admin-only menu items -->
                 <a href="shop-management.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
                     <i class="fas fa-shopping-bag w-5 text-center"></i>
                     <span>Shop Management</span>
                 </a>
                 
+                <a href="products.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-box w-5 text-center"></i>
+                    <span>Products</span>
+                </a>
                 
+                <a href="inventory.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-boxes w-5 text-center"></i>
+                    <span>Inventory</span>
+                </a>
+                
+                <a href="orders.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-shopping-cart w-5 text-center"></i>
+                    <span>Orders</span>
+                </a>
+                <?php endif; ?>
+                
+                <!-- Common items -->
                 <a href="customers.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
                     <i class="fas fa-users w-5 text-center"></i>
                     <span>Customers</span>
                 </a>
-                
-                <a href="messages.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-comment-alt w-5 text-center"></i>
-                    <span>Messages</span>
+
+                <!-- Supervisor-specific items -->
+                <?php if ($is_supervisor): ?>
+                <a href="customer_reports.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-flag w-5 text-center"></i>
+                    <span>Customer Reports</span>
                 </a>
+                
+                <a href="admin_management.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-user-cog w-5 text-center"></i>
+                    <span>Admin Management</span>
+                </a>
+                
+                <a href="admin_logs.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
+                    <i class="fas fa-history w-5 text-center"></i>
+                    <span>Activity Logs</span>
+                </a>
+                <?php endif; ?>
                 
                 <a href="settings.php" class="menu-item active flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
                     <i class="fas fa-cog w-5 text-center"></i>
@@ -231,8 +267,8 @@ if (isset($_POST['delete_account']) && isset($_POST['confirm_delete'])) {
             </div>
 
             <a href="../home.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-home w-5 text-center"></i>
-                    <span>Return to home</span>
+                <i class="fas fa-home w-5 text-center"></i>
+                <span>Return to home</span>
             </a>
             
             <a href="../auth/logout.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mt-auto hover:bg-red-500/20">
@@ -246,6 +282,18 @@ if (isset($_POST['delete_account']) && isset($_POST['confirm_delete'])) {
             <!-- Top Bar -->
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-3xl font-bold heading-font">Account Settings</h2>
+                
+                <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <div class="font-semibold"><?= htmlspecialchars($user_data['username']) ?></div>
+                            <div class="text-xs text-white/70"><?= htmlspecialchars($user_role) ?></div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <?php if (!empty($message)): ?>
@@ -265,12 +313,12 @@ if (isset($_POST['delete_account']) && isset($_POST['confirm_delete'])) {
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <div>
                                     <label class="block text-sm font-medium mb-2 opacity-80">Username</label>
-                                    <input type="text" name="username" value="<?= htmlspecialchars($admin['username']) ?>" class="form-input">
+                                    <input type="text" name="username" value="<?= htmlspecialchars($user_data['username']) ?>" class="form-input">
                                 </div>
                                 
                                 <div>
                                     <label class="block text-sm font-medium mb-2 opacity-80">Email Address</label>
-                                    <input type="email" name="email" value="<?= htmlspecialchars($admin['email']) ?>" class="form-input">
+                                    <input type="email" name="email" value="<?= htmlspecialchars($user_data['email']) ?>" class="form-input">
                                 </div>
                             </div>
                             
@@ -306,6 +354,41 @@ if (isset($_POST['delete_account']) && isset($_POST['confirm_delete'])) {
                             </button>
                         </form>
                     </div>
+                    
+                    <?php if ($is_supervisor): ?>
+                    <!-- Supervisor-specific settings -->
+                    <div class="glass-card p-6 rounded-xl mb-6">
+                        <h3 class="text-lg font-semibold mb-6 heading-font">Supervisor Settings</h3>
+                        
+                        <form method="post" action="">
+                            <div class="grid grid-cols-1 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 opacity-80">Email Notifications</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="checkbox" name="notify_reports" id="notify_reports" class="form-checkbox" checked>
+                                        <label for="notify_reports">Receive email notifications for new customer reports</label>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 opacity-80">Admin Activity Monitoring</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="checkbox" name="monitor_logins" id="monitor_logins" class="form-checkbox" checked>
+                                        <label for="monitor_logins">Monitor admin login activities</label>
+                                    </div>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <input type="checkbox" name="monitor_actions" id="monitor_actions" class="form-checkbox" checked>
+                                        <label for="monitor_actions">Monitor admin critical actions</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" name="update_supervisor_settings" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition">
+                                Save Supervisor Settings
+                            </button>
+                        </form>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 
                 <!-- Danger Zone -->

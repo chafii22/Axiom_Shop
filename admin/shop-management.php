@@ -71,6 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add-product') {
     } catch (PDOException $e) {
         $error_message = "Error adding product: " . $e->getMessage();
     }
+
+    $stmt = $pdo->prepare("INSERT INTO admin_logs (user_id, action, details, created_at) VALUES (?, ?, ?, NOW())");
+    $stmt->execute([$admin_id, 'add_product', "Added new product: $name ($product_id)"]);
 }
 
 // Delete Product
@@ -96,6 +99,9 @@ else if ($action === 'delete-product' && isset($_GET['id'])) {
     } catch (PDOException $e) {
         $error_message = "Error deleting product: " . $e->getMessage();
     }
+
+    $stmt = $pdo->prepare("INSERT INTO admin_logs (user_id, action, details, created_at) VALUES (?, ?, ?, NOW())");
+    $stmt->execute([$admin_id, 'delete_product', "Deleted product ID: $product_id"]);
 }
 
 // Add Category
