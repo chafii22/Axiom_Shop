@@ -286,6 +286,12 @@ class Shop {
                     this.openProductModal(item);
                 });
             }
+            item.addEventListener('click', (e) => {
+                // Don't open modal if clicking on buttons
+                if (!e.target.closest('.add-to-cart-btn') && !e.target.closest('.wishlist-btn')) {
+                    this.openProductModal(item);
+                }
+            });
         });
     }
     
@@ -359,7 +365,7 @@ class Shop {
     openProductModal(productItem) {
         const productId = productItem.getAttribute('data-product-id');
         const productName = productItem.querySelector('h3').textContent;
-        const productPrice = productItem.querySelector('.price').textContent.replace('$', '');
+        const productPrice = productItem.querySelector('.price-badge span').textContent.replace('$', '');
         
         // Get data from hidden div
         const productData = productItem.querySelector('.product-data');

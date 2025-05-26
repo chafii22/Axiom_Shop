@@ -523,6 +523,7 @@ main h2 {
     border-radius: 16px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     animation: modalfade 0.3s;
+    color: #0f172a;
 }
 
 @keyframes modalfade {
@@ -570,11 +571,29 @@ main h2 {
     text-align: left;
 }
 
-.modal-price,
-.modal-estimate,
+.modal-right h2 {
+    color: #0f172a;
+    text-align: left;
+    margin-bottom: 15px;
+}
+
+.modal-price, 
+.modal-estimate, 
 .modal-admin {
+    color: #333;
     margin-bottom: 10px;
 }
+
+.modal-rating .rating-avg,
+.modal-rating .rating-count {
+    color: #333;
+}
+
+.modal .stars i {
+    color: #FFD700;
+}
+
+
 
 .modal-rating {
     margin: 20px 0;

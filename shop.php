@@ -227,7 +227,7 @@ function isInWishlist($product_id) {
             <span class="close-modal">&times;</span>
             <div class="modal-body">
                 <div class="modal-left">
-                    <img id="modal-image" src="" alt="">
+                    <img id="modal-image" src="" alt="Product Image" class="modal-image">
                 </div>
                 <div class="modal-right">
                     <h2 id="modal-name"></h2>
