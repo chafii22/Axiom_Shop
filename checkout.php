@@ -106,18 +106,18 @@ $page_title = 'Checkout - ' . $checkout_steps[$current_step];
     <!-- Navigation Warning Modal -->
     <div class="modal fade" id="leavePageModal" tabindex="-1" aria-labelledby="leavePageModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-gray-800 text-white border border-gray-700">
-                <div class="modal-header border-gray-700">
+            <div class="modal-content">
+                <div class="modal-header">
                     <h5 class="modal-title" id="leavePageModalLabel">Are you sure?</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <p>You are in the middle of the checkout process. If you leave now, your progress will not be saved until you complete the checkout and payment.</p>
                     <p>Are you sure you want to leave this page?</p>
                 </div>
-                <div class="modal-footer border-gray-700">
-                    <button type="button" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg" data-bs-dismiss="modal">Stay on this page</button>
-                    <a href="#" id="confirmLeave" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">Leave anyway</a>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Stay on this page</button>
+                    <a href="#" id="confirmLeave" class="btn btn-primary">Leave anyway</a>
                 </div>
             </div>
         </div>

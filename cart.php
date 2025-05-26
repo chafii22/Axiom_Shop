@@ -33,7 +33,7 @@ if (!empty($cartItems)) {
     error_log('Updated SESSION cart: ' . print_r($_SESSION['cart'], true));
 }
 
-// Set page variables
+//Set page variables
 $current_page = 'cart';
 $base_url = '';
 ?>
@@ -67,6 +67,29 @@ $base_url = '';
             border-radius: 8px;
             overflow: hidden;
         }
+
+        /* Make sure price text is visible */
+        .cart-table td:nth-child(3),
+        .cart-table td:nth-child(5) {
+            color: #333333;
+            font-weight: 600;
+        }
+        
+        /* Fix quantity input text */
+        .cart-item-quantity input {
+            color: #333333;
+            background-color: #ffffff;
+        }
+        
+        /* Cart summary text */
+        .cart-summary {
+            color: #333333;
+        }
+
+        .cart-table h3 {
+            color: #333333;
+        }
+
         .cart-table th {
             background: #f9fafb;
             padding: 12px 16px;
@@ -254,9 +277,9 @@ $base_url = '';
                     <a href="shop.php" class="continue-shopping flex items-center text-blue-600 hover:text-blue-800">
                         <i class="fas fa-arrow-left mr-2"></i> Continue Shopping
                     </a>
-                    <button id="checkout-btn" class="checkout-btn">
-                        <i class="fas fa-arrow-right ml-2"></i><a href="checkout.php" class="checkout-btn" id="checkout-btn">Proceed to Checkout</a>
-                    </button>
+                    <a href="checkout.php" class="checkout-btn" id="checkout-btn">
+                        Proceed to Checkout <i class="fas fa-arrow-right ml-2"></i>
+                    </a>
                 </div>
             </div>
             <?php endif; ?>
@@ -293,12 +316,12 @@ $base_url = '';
             });
             
             // Checkout button
-            const checkoutBtn = document.getElementById('checkout-btn');
+            /*const checkoutBtn = document.getElementById('checkout-btn');
             if (checkoutBtn) {
                 checkoutBtn.addEventListener('click', function() {
                     window.location.href = 'checkout.php';
                 });
-            }
+            }*/
             
             // Functions to interact with the cart_api.php API
             function updateCartQuantity(productId, change) {
@@ -399,10 +422,3 @@ $base_url = '';
     </script>
 </body>
 </html>
-
-<?php foreach ($cartItems as $item): ?>
-                        <?php //if (isset($products[$product_id])): ?>
-                            <?php //$product = $products[$product_id]; ?>
-                            
-                        <?php //endif; ?>
-                    <?php endforeach; ?>

@@ -59,7 +59,7 @@ class CartService {
 
 class Shop {
     constructor() {
-        this.productContainer = document.querySelector('.product-list');
+        this.productContainer = document.querySelector('.product-grid');
         this.categoryIcons = document.querySelectorAll('.category-icon-item');
    
         this.modal = document.getElementById('product-modal');

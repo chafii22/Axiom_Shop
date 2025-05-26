@@ -18,11 +18,12 @@ if (isset($_POST['report_customer']) && !$is_supervisor) {
     
     try {
         // Insert report into database using PDO
-        $stmt = $pdo->prepare("INSERT INTO customer_reports (customer_id, report_reason, reported_by, report_date) 
-                            VALUES (?, ?, ?, NOW())");
+        $stmt = $pdo->prepare("INSERT INTO customer_reports (customer_id, report_reason, reported_by, report_date, status) 
+                            VALUES (?, ?, ?, NOW(), 'pending')");
         $stmt->execute([$customer_id, $report_reason, $_SESSION['admin_id']]);
         
         $_SESSION['success_message'] = "Customer has been reported to supervisor";
+        header("Location: customers.php");
         exit();
     } catch (PDOException $e) {
         $_SESSION['error_message'] = "Error reporting customer: " . $e->getMessage();
@@ -39,6 +40,24 @@ if (isset($_POST['resolve_report']) && $is_supervisor) {
         // Update report status
         $stmt = $pdo->prepare("UPDATE customer_reports SET status = ?, resolution = ?, resolved_by = ?, resolved_date = NOW() WHERE id = ?");
         $stmt->execute([$action, $resolution, $_SESSION['user_id'], $report_id]);
+        
+        // If action is 'block', update the customer status
+        if ($action == 'block') {
+            // Get the customer ID from the report
+            $stmt = $pdo->prepare("SELECT customer_id FROM customer_reports WHERE id = ?");
+            $stmt->execute([$report_id]);
+            $customer_id = $stmt->fetchColumn();
+            
+            if ($customer_id) {
+                $stmt = $pdo->prepare("UPDATE users SET status = 'blocked' WHERE id = ?");
+                $stmt->execute([$customer_id]);
+                
+                // Log the blocking action
+                $stmt = $pdo->prepare("INSERT INTO admin_logs (admin_id, action, target_id, target_type, details, created_at) 
+                                    VALUES (?, 'block_customer', ?, 'user', ?, NOW())");
+                $stmt->execute([$_SESSION['user_id'], $customer_id, "Customer blocked due to report #$report_id: $resolution"]);
+            }
+        }
         
         $_SESSION['success_message'] = "Report has been resolved";
         header("Location: customers.php");
@@ -78,28 +97,47 @@ if (isset($_SESSION['admin_id'])) {
 }
 
 // Adjust query for supervisor vs admin
-if ($is_supervisor && $filter == 'reported') {
-    // Supervisors see reported customers with report details
-    $query = "SELECT u.*, r.id as report_id, r.report_reason, r.report_date, r.status as report_status,
-             (SELECT username FROM users WHERE id = r.reported_by) as reported_by_name,
-             (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) as order_count,
-             (SELECT COALESCE(SUM(total_amount), 0) FROM orders o WHERE o.user_id = u.id) as total_spent
-             FROM users u 
-             JOIN customer_reports r ON u.id = r.customer_id
-             WHERE u.is_admin = 0";
-             
-    if ($filter == 'pending') {
-        $query .= " AND r.status = 'pending'";
+if ($is_supervisor) {
+    if ($filter == 'reported') {
+        // Supervisors see all reported customers with report details
+        $query = "SELECT u.*, r.id as report_id, r.report_reason, r.report_date, r.status as report_status,
+                (SELECT username FROM users WHERE id = r.reported_by) as reported_by_name,
+                (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) as order_count,
+                (SELECT COALESCE(SUM(total_amount), 0) FROM orders o WHERE o.user_id = u.id) as total_spent
+                FROM users u 
+                JOIN customer_reports r ON u.id = r.customer_id
+                WHERE u.is_admin = 0";
+    } elseif ($filter == 'pending') {
+        // Only pending reports
+        $query = "SELECT u.*, r.id as report_id, r.report_reason, r.report_date, r.status as report_status,
+                (SELECT username FROM users WHERE id = r.reported_by) as reported_by_name,
+                (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) as order_count,
+                (SELECT COALESCE(SUM(total_amount), 0) FROM orders o WHERE o.user_id = u.id) as total_spent
+                FROM users u 
+                JOIN customer_reports r ON u.id = r.customer_id
+                WHERE u.is_admin = 0 AND r.status = 'pending'";
+    } else {
+        // Regular customer query
+        $query = "SELECT u.*, 
+                (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) as order_count,
+                (SELECT COALESCE(SUM(total_amount), 0) FROM orders o WHERE o.user_id = u.id) as total_spent
+                FROM users u WHERE u.is_admin = 0";
+                
+        if ($filter == 'new') {
+            $query .= " AND u.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+        }
     }
 } else {
-    // Regular customer query
+    // Regular customer query for admin
     $query = "SELECT u.*, 
-             (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) as order_count,
-             (SELECT COALESCE(SUM(total_amount), 0) FROM orders o WHERE o.user_id = u.id) as total_spent
-             FROM users u WHERE u.is_admin = 0";
-             
+            (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) as order_count,
+            (SELECT COALESCE(SUM(total_amount), 0) FROM orders o WHERE o.user_id = u.id) as total_spent
+            FROM users u WHERE u.is_admin = 0";
+            
     if ($filter == 'reported') {
         $query .= " AND u.id IN (SELECT customer_id FROM customer_reports)";
+    } elseif ($filter == 'new') {
+        $query .= " AND u.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
     }
 }
 
@@ -129,176 +167,91 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Keep your existing styles -->
-     <style>
-
+    <style>
         @font-face {
-
             font-family: 'Space Grotesk';
-
             src: url(../assets/fonts/Incrediible-BF6814d5097d803.ttf) format('truetype');
-
         }
-
         body {
-
             font-family: 'Noto Sans', sans-serif;
-
             background-color: #0f172a;
-
             position: relative;
-
             min-height: 100vh;
-
         }
-
-
 
         body::before {
-
             content: '';
-
             position: absolute;
-
             top: 0;
-
             left: 0;
-
             width: 100%;
-
             height: 100%;
-
             z-index: -1;
-
             opacity: 0.2;
-
             background-image: 
-
                 linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-
                 linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-
             background-size: 20px 30px, 30px 20px;
-
             pointer-events: none;
-
         }
-
         
-
         .glass-sidebar {
-
             background: rgba(0, 0, 0, 0.4);
-
             backdrop-filter: blur(10px);
-
             -webkit-backdrop-filter: blur(10px);
-
             border-right: 1px solid rgba(255, 255, 255, 0.1);
-
         }
-
         
-
         .glass-card {
-
             background: rgba(0, 0, 0, 0.2);
-
             backdrop-filter: blur(8px);
-
             -webkit-backdrop-filter: blur(8px);
-
             border: 1px solid rgba(255, 255, 255, 0.3);
-
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-
         }
-
         
-
         .menu-item {
-
             transition: all 0.3s ease;
-
             border-left: 3px solid transparent;
-
         }
-
         
-
         .menu-item:hover {
-
             background: rgba(255, 255, 255, 0.1);
-
             border-left: 3px solid rgba(255, 255, 255, 0.5);
-
         }
-
         
-
         .menu-item.active {
-
             background: rgba(255, 255, 255, 0.15);
-
             border-left: 3px solid white;
-
         }
-
         
-
         .heading-font {
-
             font-family: 'Space Grotesk', sans-serif;
-
         }
-
         
-
         .status-badge {
-
             padding: 0.25rem 0.75rem;
-
             border-radius: 9999px;
-
             font-size: 0.75rem;
-
             font-weight: 500;
-
             text-transform: uppercase;
-
         }
-
         
-
         .status-active {
-
             background-color: rgba(16, 185, 129, 0.2);
-
             color: #34d399;
-
         }
-
         
-
         .status-blocked {
-
             background-color: rgba(239, 68, 68, 0.2);
-
             color: #f87171;
-
         }
-
         
-
         .status-pending {
-
             background-color: rgba(245, 158, 11, 0.2);
-
             color: #fbbf24;
-
         }
-
     </style>
-
 </head>
 <body class="text-white min-h-screen">
     <div class="flex min-h-screen">
@@ -324,20 +277,7 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <span>Shop Management</span>
                 </a>
                 
-                <a href="products.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-box w-5 text-center"></i>
-                    <span>Products</span>
-                </a>
                 
-                <a href="inventory.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-boxes w-5 text-center"></i>
-                    <span>Inventory</span>
-                </a>
-                
-                <a href="orders.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-shopping-cart w-5 text-center"></i>
-                    <span>Orders</span>
-                </a>
                 <?php endif; ?>
                 
                 <!-- Common items -->
@@ -460,7 +400,7 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <th class="px-6 py-3 font-medium">ID</th>
                                 <th class="px-6 py-3 font-medium">Name</th>
                                 <th class="px-6 py-3 font-medium">Email</th>
-                                <?php if ($is_supervisor && $filter == 'reported'): ?>
+                                <?php if ($is_supervisor && ($filter == 'reported' || $filter == 'pending')): ?>
                                 <th class="px-6 py-3 font-medium">Reported By</th>
                                 <th class="px-6 py-3 font-medium">Reason</th>
                                 <th class="px-6 py-3 font-medium">Date</th>
@@ -485,7 +425,7 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <td class="px-6 py-4"><?= htmlspecialchars($customer['first_name'] . ' ' . $customer['last_name']) ?></td>
                                         <td class="px-6 py-4"><?= htmlspecialchars($customer['email']) ?></td>
                                         
-                                        <?php if ($is_supervisor && $filter == 'reported'): ?>
+                                        <?php if ($is_supervisor && ($filter == 'reported' || $filter == 'pending')): ?>
                                         <td class="px-6 py-4"><?= htmlspecialchars($customer['reported_by_name'] ?? 'Unknown') ?></td>
                                         <td class="px-6 py-4"><?= htmlspecialchars(substr($customer['report_reason'] ?? '', 0, 30)) ?>...</td>
                                         <td class="px-6 py-4"><?= date('M d, Y', strtotime($customer['report_date'])) ?></td>
@@ -501,7 +441,7 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         
                                         <td class="px-6 py-4">
                                             <?php 
-                                                if ($is_supervisor && $filter == 'reported') {
+                                                if ($is_supervisor && ($filter == 'reported' || $filter == 'pending')) {
                                                     $statusClass = 'status-pending';
                                                     $statusText = 'Pending';
                                                     
@@ -538,16 +478,21 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                     <i class="fas fa-eye"></i>
                                                 </button>
                                                 
-                                                <?php if ($is_supervisor && $filter == 'reported'): ?>
+                                                <?php if ($is_supervisor && ($filter == 'reported' || $filter == 'pending')): ?>
                                                 <button class="resolve-report p-1 text-green-400 hover:text-green-300"
                                                         data-id="<?= $customer['report_id'] ?>"
                                                         data-name="<?= htmlspecialchars($customer['first_name'] . ' ' . $customer['last_name']) ?>">
                                                     <i class="fas fa-check"></i>
                                                 </button>
-                                                <button class="dismiss-report p-1 text-red-400 hover:text-red-300"
+                                                <button class="block-customer p-1 text-orange-400 hover:text-orange-300"
                                                         data-id="<?= $customer['report_id'] ?>"
                                                         data-name="<?= htmlspecialchars($customer['first_name'] . ' ' . $customer['last_name']) ?>">
                                                     <i class="fas fa-ban"></i>
+                                                </button>
+                                                <button class="dismiss-report p-1 text-red-400 hover:text-red-300"
+                                                        data-id="<?= $customer['report_id'] ?>"
+                                                        data-name="<?= htmlspecialchars($customer['first_name'] . ' ' . $customer['last_name']) ?>">
+                                                    <i class="fas fa-times"></i>
                                                 </button>
                                                 <?php elseif (!$is_supervisor): ?>
                                                 <button class="report-customer p-1 text-yellow-400 hover:text-yellow-300" 
@@ -572,11 +517,52 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
     
     <!-- Customer Details Modal -->
-    <!-- Keep your existing modal code -->
+    <div id="customerDetailsModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-6 rounded-xl max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold heading-font">Customer Details</h3>
+                <button id="closeDetailsModal" class="text-white/70 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="customerDetailsContent" class="space-y-4">
+                <!-- Content will be loaded via AJAX -->
+                <div class="flex justify-center">
+                    <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-white"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <?php if (!$is_supervisor): ?>
     <!-- Report Customer Modal (Admin only) -->
-    <!-- Keep your existing report modal code -->
+    <div id="reportCustomerModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-6 rounded-xl max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold heading-font">Report Customer</h3>
+                <button id="closeReportModal" class="text-white/70 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form method="POST" action="customers.php">
+                <input type="hidden" name="customer_id" id="report_customer_id">
+                <p class="mb-4">You are reporting customer <strong id="report_customer_name"></strong> for supervisor review.</p>
+                <div class="mb-4">
+                    <label for="report_reason" class="block text-sm font-medium text-gray-300 mb-1">Reason for Report:</label>
+                    <textarea class="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white" 
+                              name="report_reason" id="report_reason" rows="4" required></textarea>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancelReport" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg">
+                        Cancel
+                    </button>
+                    <button type="submit" name="report_customer" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg">
+                        Submit Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     <?php else: ?>
     <!-- Resolve Report Modal (Supervisor only) -->
     <div id="resolveReportModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 hidden">
@@ -602,6 +588,36 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </button>
                     <button type="submit" name="resolve_report" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg">
                         Resolve Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Block Customer Modal (Supervisor only) -->
+    <div id="blockCustomerModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-6 rounded-xl max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold heading-font">Block Customer</h3>
+                <button id="closeBlockModal" class="text-white/70 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form method="POST" action="customers.php">
+                <input type="hidden" name="report_id" id="block_report_id">
+                <input type="hidden" name="action" value="block">
+                <p class="mb-4">You are blocking customer <strong id="block_customer_name"></strong>. This action will prevent the customer from logging in.</p>
+                <div class="mb-4">
+                    <label for="block_resolution" class="block text-sm font-medium text-gray-300 mb-1">Reason for Blocking:</label>
+                    <textarea class="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white" 
+                              name="resolution" id="block_resolution" rows="4" required></textarea>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancelBlock" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg">
+                        Cancel
+                    </button>
+                    <button type="submit" name="resolve_report" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg">
+                        Block Customer
                     </button>
                 </div>
             </form>
@@ -677,6 +693,7 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 customerDetailsModal.classList.add('hidden');
             });
             
+            <?php if (!$is_supervisor): ?>
             // Report customer
             const reportButtons = document.querySelectorAll('.report-customer');
             const reportCustomerModal = document.getElementById('reportCustomerModal');
@@ -703,10 +720,8 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             cancelReport.addEventListener('click', function() {
                 reportCustomerModal.classList.add('hidden');
             });
-        });
-        <?php if ($is_supervisor): ?>
-        // Supervisor-specific scripts
-        document.addEventListener('DOMContentLoaded', function() {
+            <?php else: ?>
+            // Supervisor-specific scripts
             // Resolve report modal
             const resolveButtons = document.querySelectorAll('.resolve-report');
             const resolveReportModal = document.getElementById('resolveReportModal');
@@ -732,6 +747,33 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             cancelResolve.addEventListener('click', function() {
                 resolveReportModal.classList.add('hidden');
+            });
+            
+            // Block customer modal
+            const blockButtons = document.querySelectorAll('.block-customer');
+            const blockCustomerModal = document.getElementById('blockCustomerModal');
+            const closeBlockModal = document.getElementById('closeBlockModal');
+            const cancelBlock = document.getElementById('cancelBlock');
+            const blockReportId = document.getElementById('block_report_id');
+            const blockCustomerName = document.getElementById('block_customer_name');
+            
+            blockButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const reportId = this.getAttribute('data-id');
+                    const customerName = this.getAttribute('data-name');
+                    
+                    blockReportId.value = reportId;
+                    blockCustomerName.textContent = customerName;
+                    blockCustomerModal.classList.remove('hidden');
+                });
+            });
+            
+            closeBlockModal.addEventListener('click', function() {
+                blockCustomerModal.classList.add('hidden');
+            });
+            
+            cancelBlock.addEventListener('click', function() {
+                blockCustomerModal.classList.add('hidden');
             });
             
             // Dismiss report modal
@@ -760,8 +802,8 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             cancelDismiss.addEventListener('click', function() {
                 dismissReportModal.classList.add('hidden');
             });
+            <?php endif; ?>
         });
-        <?php endif; ?>
     </script>
 </body>
 </html>

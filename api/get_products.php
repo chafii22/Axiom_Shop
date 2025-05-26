@@ -72,49 +72,66 @@ try {
     echo '<p class="error">Database error: Unable to retrieve products.</p>';
     exit;
 }?>
-
+    
     <?php if (count($products) > 0): 
         foreach ($products as $product): 
             $rating = getProductRating($pdo, $product['id']);
             $wishlist_class = isInWishlist($product['id']) ? 'in-wishlist' : '';
             $estimate_days = isset($product['estimate_days']) ? $product['estimate_days'] : '3-5';
     ?>
-    <div class="product-item" data-product-id="<?php echo $product['id']; ?>">
-        <div class="product-image-container">
-            <button class="wishlist-btn <?php echo $wishlist_class; ?>" data-product-id="<?php echo $product['id']; ?>">
-                <i class="fas fa-heart"></i>
-            </button>
-            <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image">
-        </div>
-        <div class="product-details">
-            <h3><?php echo htmlspecialchars($product['name']); ?></h3>
-            <p class="price">$<?php echo htmlspecialchars(number_format($product['price'], 2)); ?></p>
-            <div class="product-footer">
-                <div class="rating" title="<?php echo $rating['average']; ?> stars based on <?php echo $rating['count']; ?> reviews">
-                    <?php for($i = 1; $i <= 5; $i++): ?>
-                        <i class="fa<?php echo $i <= $rating['average'] ? 's' : 'r'; ?> fa-star"></i>
-                    <?php endfor; ?>
-                    <span class="rating-count">(<?php echo $rating['count']; ?>)</span>
-                </div>
-                <button class="add-to-cart-btn" 
-                    data-product-id="<?php echo $product['id']; ?>"
-                    data-product-name="<?php echo htmlspecialchars($product['name']); ?>"
-                    data-product-price="<?php echo $product['price']; ?>">
-                    <i class="fas fa-shopping-cart"></i>
+        <div class="product-item glass-card" data-product-id="<?php echo $product['id']; ?>">
+            <div class="product-image-container">
+                <button class="wishlist-btn <?php echo $wishlist_class; ?>" data-product-id="<?php echo $product['id']; ?>">
+                    <i class="fas fa-heart"></i>
                 </button>
+                
+                <?php if (!empty($product['image'])): ?>
+                    <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image">
+                <?php else: ?>
+                    <div class="no-image">
+                        <i class="fas fa-image"></i>
+                    </div>
+                <?php endif; ?>
+                
+                <div class="price-badge">
+                    <span>$<?php echo htmlspecialchars(number_format($product['price'], 2)); ?></span>
+                </div>
             </div>
-            
-            <!-- Hidden product data for modal -->
-            <div class="product-data" style="display:none;">
-                <span data-type="admin"><?php echo htmlspecialchars($product['admin_name']); ?></span>
-                <span data-type="estimate"><?php echo $estimate_days; ?> days</span>
-                <span data-type="image"><?php echo htmlspecialchars($product['image']); ?></span>
+            <div class="product-details">
+                <h3><?php echo htmlspecialchars($product['name']); ?></h3>
+                
+                <div class="product-footer">
+                    <div class="rating" title="<?php echo $rating['average']; ?> stars based on <?php echo $rating['count']; ?> reviews">
+                        <?php for($i = 1; $i <= 5; $i++): ?>
+                            <i class="fa<?php echo $i <= $rating['average'] ? 's' : 'r'; ?> fa-star"></i>
+                        <?php endfor; ?>
+                        <span class="rating-count">(<?php echo $rating['count']; ?>)</span>
+                    </div>
+                    <button class="add-to-cart-btn" 
+                        data-product-id="<?php echo $product['id']; ?>"
+                        data-product-name="<?php echo htmlspecialchars($product['name']); ?>"
+                        data-product-price="<?php echo $product['price']; ?>">
+                        <i class="fas fa-shopping-cart"></i>
+                    </button>
+                </div>
+                
+                <!-- Hidden product data for modal -->
+                <div class="product-data" style="display:none;">
+                    <span data-type="admin"><?php echo isset($product['admin_name']) ? htmlspecialchars($product['admin_name']) : 'Admin'; ?></span>
+                    <span data-type="estimate"><?php echo $estimate_days; ?> days</span>
+                    <span data-type="image"><?php echo htmlspecialchars($product['image']); ?></span>
+                </div>
             </div>
         </div>
-    </div>
     <?php 
         endforeach;
     else: 
     ?>
-    <p class="no-products">No products available in this category.</p>
+        <div class="no-products">
+            <i class="fas fa-box-open text-3xl mb-3"></i>
+            <p>No products available in this category.</p>
+            <a href="shop.php" class="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 inline-block rounded-lg transition">
+                Browse All Products
+            </a>
+        </div>
     <?php endif; ?>

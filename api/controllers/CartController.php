@@ -100,6 +100,9 @@ class CartController {
         $result = $this->cartModel->removeItem($userId, $productId);
         
         if ($result) {
+            if (isset($_SESSION['cart'][$productId])) {
+                unset($_SESSION['cart'][$productId]);
+            }
             // Get updated cart count
             
             $cartCount = $this->getCartCount($userId);
@@ -182,6 +185,13 @@ class CartController {
         }
         
         if ($result) {
+            if (isset($_SESSION['cart'][$productId])) {
+                if ($newQuantity <= 0) {
+                    unset($_SESSION['cart'][$productId]);
+                } else {
+                    $_SESSION['cart'][$productId]['quantity'] = $newQuantity;
+                }
+            }
             // Get updated cart count
             
             $cartCount = $this->getCartCount($userId);

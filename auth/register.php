@@ -1,7 +1,6 @@
 <?php
 require '../config/connect_db.php';
 session_start();
-require_once '../includes/email_functions.php';
 
 // Generate CSRF token if not exists
 if (!isset($_SESSION['csrf_token'])) {
@@ -40,25 +39,8 @@ if (isset($_POST['request_admin_code']) && isset($_POST['admin_email'])) {
         exit;
     }
 
-    require_once '../includes/email_templates.php';
-    
-    // Generate a code
-    $code = generateRandomCode(6);
-    $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
-    
-    // Save code in database
-    try {
-        $emailBody = getAdminCodeEmailTemplate($code);
-        
-        if (sendEmail($email, 'Axiom Admin Registration Code', $emailBody)) {
-            echo json_encode(['status' => 'success', 'message' => 'Registration code sent to your email']);
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Failed to send email. Please try again.']);
-        }
-    } catch (PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
-    }
-    
+    // Use a fixed admin code instead of generating and emailing one
+    echo json_encode(['status' => 'success', 'message' => 'Please use the admin code provided by site owner']);
     exit;
 }
 
@@ -109,18 +91,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
             $errors['supervisor_code'] = "Invalid supervisor code";
         }
     } elseif ($is_admin) {
-        // Validate admin code from database
-        if (empty($admin_code)) {
-            $errors['admin_code'] = "Admin code is required";
-        } else {
-            $stmt = $pdo->prepare("SELECT * FROM admin_registration_codes WHERE email = ? AND code = ? AND used = 0 AND expires_at > NOW() LIMIT 1");
-            $stmt->execute([$email, $admin_code]);
-            $valid_code = $stmt->fetch();
-            
-            if (!$valid_code) {
-                $errors['admin_code'] = "Invalid or expired admin code";
-            }
-        }
+        $master_admin_code = "AXIOM_ADMIN_2025"; // Store this more securely in production
+            if (empty($admin_code)) {
+                $errors['admin_code'] = "Admin code is required";
+            } else if ($admin_code !== $master_admin_code) {
+                $errors['admin_code'] = "Invalid admin code";
+            }  
     }
     
     // Check if username or email already exists
@@ -153,11 +129,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
                                   VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->execute([$username, $email, $first_name, $last_name, $hashed_password, $is_admin, $is_supervisor]);
             
-            // If admin, mark the code as used
-            if ($is_admin) {
-                $stmt = $pdo->prepare("UPDATE admin_registration_codes SET used = 1 WHERE email = ? AND code = ?");
-                $stmt->execute([$email, $admin_code]);
-            }
+           
             
             // Commit transaction
             $pdo->commit();

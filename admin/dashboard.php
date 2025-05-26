@@ -306,20 +306,6 @@ $chartDataJson = json_encode($chartData ?: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                     <span>Shop Management</span>
                 </a>
                 
-                <a href="products.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-box w-5 text-center"></i>
-                    <span>Products</span>
-                </a>
-                
-                <a href="inventory.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-boxes w-5 text-center"></i>
-                    <span>Inventory</span>
-                </a>
-                
-                <a href="orders.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-shopping-cart w-5 text-center"></i>
-                    <span>Orders</span>
-                </a>
                 <?php endif; ?>
                 
                 <!-- Common items -->
@@ -345,16 +331,8 @@ $chartDataJson = json_encode($chartData ?: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                     <span>Activity Logs</span>
                 </a>
                 
-                <a href="performance.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-chart-line w-5 text-center"></i>
-                    <span>Performance Metrics</span>
-                </a>
-                <?php endif; ?>
                 
-                <a href="messages.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-comment-alt w-5 text-center"></i>
-                    <span>Messages</span>
-                </a>
+                <?php endif; ?>
                 
                 <a href="settings.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
                     <i class="fas fa-cog w-5 text-center"></i>

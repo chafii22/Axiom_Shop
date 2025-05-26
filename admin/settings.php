@@ -220,20 +220,7 @@ if (isset($_POST['delete_account']) && isset($_POST['confirm_delete'])) {
                     <span>Shop Management</span>
                 </a>
                 
-                <a href="products.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-box w-5 text-center"></i>
-                    <span>Products</span>
-                </a>
                 
-                <a href="inventory.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-boxes w-5 text-center"></i>
-                    <span>Inventory</span>
-                </a>
-                
-                <a href="orders.php" class="menu-item flex items-center gap-4 px-4 py-3 rounded-lg mb-2">
-                    <i class="fas fa-shopping-cart w-5 text-center"></i>
-                    <span>Orders</span>
-                </a>
                 <?php endif; ?>
                 
                 <!-- Common items -->

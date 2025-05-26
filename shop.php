@@ -8,6 +8,20 @@ if (!isset($_SESSION['wishlist'])) {
     $_SESSION['wishlist'] = [];
 }
 
+// Load wishlist items from database for logged-in users
+if (isset($_SESSION['user_id']) && $_SESSION['user_id'] > 0) {
+    try {
+        $stmt = $pdo->prepare("SELECT product_id FROM wishlist WHERE user_id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $wishlist_items = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Merge with session wishlist (in case there are items in session not yet in DB)
+        $_SESSION['wishlist'] = array_unique(array_merge($_SESSION['wishlist'], $wishlist_items));
+    } catch (PDOException $e) {
+        // Table might not exist yet, that's okay
+    }
+}
+
 
 // Get the category id of the product
 $category_id = isset($_GET['category_id']) ? (int)$_GET['category_id'] : null;
@@ -91,7 +105,7 @@ function getProductRating($pdo, $product_id) {
 // Function to check if product is in user's wishlist
 function isInWishlist($product_id) {
     if (!isset($_SESSION['wishlist'])) {
-        $_SESSION['wishlist'] = [];
+        return false;
     }
     return in_array($product_id, $_SESSION['wishlist']);
 }
@@ -118,27 +132,23 @@ function isInWishlist($product_id) {
             <aside class="sticky-sidebar">
                 <div class="sidebar-filter">
                     <a href="#" class="category-icon-item <?php echo !$category_id ? 'active' : ''; ?>" data-category="" id="category-all">
-                        <div class="icon-container">
-                            <img src="assets/images/icons/all.png" alt="All Categories">
-                        </div>
+                        
                         <span class="category-name">All Categories</span>
                     </a>
                     
                     <?php foreach ($categories as $category): ?>
                     <a href="#" class="category-icon-item <?php echo ($category_id == $category['id']) ? 'active' : ''; ?>" 
-                       data-category="<?php echo htmlspecialchars($category['id']); ?>">
-                        <div class="icon-container">
-                            <img src="assets/images/icons/<?php echo strtolower(str_replace(' ', '-', $category['name'])); ?>.png" 
-                                 alt="<?php echo htmlspecialchars($category['name']); ?>">
-                        </div>
+                    data-category="<?php echo htmlspecialchars($category['id']); ?>">
+                        
                         <span class="category-name"><?php echo htmlspecialchars($category['name']); ?></span>
                     </a>
                     <?php endforeach; ?>
                 </div>
             </aside>
 
-                      
-                <div class="product-list" id="product-list">
+                    
+            <div class="products-wrapper">
+                <div class="product-grid" id="product-list">
                     <?php 
                     // Check if there are products
                     if (count($products) > 0): 
@@ -148,16 +158,27 @@ function isInWishlist($product_id) {
                             $wishlist_class = isInWishlist($product['id']) ? 'in-wishlist' : '';
                             $estimate_days = isset($product['estimate_days']) ? $product['estimate_days'] : '3-5';
                     ?>
-                        <div class="product-item" data-product-id="<?php echo $product['id']; ?>">
+                        <div class="product-item glass-card" data-product-id="<?php echo $product['id']; ?>">
                             <div class="product-image-container">
                                 <button class="wishlist-btn <?php echo $wishlist_class; ?>" data-product-id="<?php echo $product['id']; ?>">
                                     <i class="fas fa-heart"></i>
                                 </button>
-                                <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image">
+                                
+                                <?php if (!empty($product['image'])): ?>
+                                    <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image">
+                                <?php else: ?>
+                                    <div class="no-image">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <div class="price-badge">
+                                    <span>$<?php echo htmlspecialchars(number_format($product['price'], 2)); ?></span>
+                                </div>
                             </div>
                             <div class="product-details">
                                 <h3><?php echo htmlspecialchars($product['name']); ?></h3>
-                                <p class="price">$<?php echo htmlspecialchars(number_format($product['price'], 2)); ?></p>
+                                
                                 <div class="product-footer">
                                     <div class="rating" title="<?php echo $rating['average']; ?> stars based on <?php echo $rating['count']; ?> reviews">
                                         <?php for($i = 1; $i <= 5; $i++): ?>
@@ -185,9 +206,16 @@ function isInWishlist($product_id) {
                         endforeach; 
                     else: 
                     ?>
-                        <p class="no-products">No products available at the moment.</p>
+                        <div class="no-products">
+                            <i class="fas fa-box-open text-3xl mb-3"></i>
+                            <p>No products available in this category.</p>
+                            <a href="shop.php" class="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 inline-block rounded-lg transition">
+                                Browse All Products
+                            </a>
+                        </div>
                     <?php endif; ?>
                 </div>
+            </div>
                 
             
         </div>
@@ -230,5 +258,37 @@ function isInWishlist($product_id) {
 
     <script src="<?php echo $root_path ?? ''; ?>js/utils.js"></script>
     <script src="js/shop.js?v=<?php echo time(); ?>" defer></script>
+ 
+    <?php
+    // Add this function to your file (near your other functions)
+    function getCategoryIcon($categoryName) {
+        // Custom icon map for your specific categories
+        $iconMap = [
+            'all categories' => 'fa-th',
+            'kinetic machines' => 'fa-cogs',
+            'mech suit' => 'fa-robot',
+            'mecha' => 'fa-robot',
+            'men fashion' => 'fa-user-tie',
+            'pet robot' => 'fa-dog',
+            'prosthetic' => 'fa-hand',
+            'women fashion' => 'fa-female',
+            // Fallback icons for potential future categories
+            'electronics' => 'fa-microchip',
+            'accessories' => 'fa-glasses',
+            'gadgets' => 'fa-tablet-alt'
+        ];
+        
+        // Convert category name to lowercase for comparison
+        $lowerName = strtolower($categoryName);
+        
+        // Look for exact matches first
+        if (isset($iconMap[$lowerName])) {
+            return $iconMap[$lowerName];
+        }
+        
+        // Default icon if no match found
+        return 'fa-tag';
+    }
+    ?>
 </body>
 </html>

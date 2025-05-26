@@ -66,19 +66,30 @@ switch ($action) {
                     $existingItem = $stmt->fetch();
                     
                     if ($existingItem) {
-                        // Remove from wishlist
                         $stmt = $pdo->prepare("DELETE FROM wishlist WHERE user_id = ? AND product_id = ?");
                         $stmt->execute([$user_id, $product_id]);
+
+                        // Remove from session wishlist
+                        $index = array_search($product_id, $_SESSION['wishlist']);
+                        if ($index !== false) {
+                            unset($_SESSION['wishlist'][$index]);
+                            $_SESSION['wishlist'] = array_values($_SESSION['wishlist']); // Reindex
+                        }
                         $response['in_wishlist'] = false;
                         $response['message'] = 'Product removed from wishlist';
                     } else {
-                        // Add to wishlist
                         $stmt = $pdo->prepare("INSERT INTO wishlist (user_id, product_id) VALUES (?, ?)");
                         $stmt->execute([$user_id, $product_id]);
+
+                        // Add to session wishlist
+                        if (!in_array($product_id, $_SESSION['wishlist'])) {
+                            $_SESSION['wishlist'][] = $product_id;
+                        }
+                    
                         $response['in_wishlist'] = true;
                         $response['message'] = 'Product added to wishlist';
                     }
-                    
+
                     $response['success'] = true;
                     
                 } catch (PDOException $e) {
@@ -86,8 +97,23 @@ switch ($action) {
                     error_log("Wishlist database error: " . $e->getMessage());
                 }
         } else {
-                $response['message'] = 'User not logged in';
-        }
+            // For non-logged in users, update session only
+            $index = array_search($product_id, $_SESSION['wishlist']);
+            if ($index !== false) {
+                // Remove from wishlist
+                unset($_SESSION['wishlist'][$index]);
+                $_SESSION['wishlist'] = array_values($_SESSION['wishlist']); // Reindex
+                $response['in_wishlist'] = false;
+                $response['message'] = 'Product removed from wishlist';
+            } else {
+                // Add to wishlist
+                $_SESSION['wishlist'][] = $product_id;
+                $response['in_wishlist'] = true;
+                $response['message'] = 'Product added to wishlist';
+            }
+            $response['success'] = true;
+        }    
+        
         break;
         
     case 'check':

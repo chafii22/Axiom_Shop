@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 require_once '../config/connect_db.php';
@@ -34,6 +33,8 @@ try {
                           WHERE w.user_id = ?");
     $stmt->execute([$user_id]);
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $_SESSION['wishlist'] = array_column($products, 'id');
     
     // Count wishlist items
     $wishlist_count = count($products);
@@ -72,84 +73,136 @@ function getProductRating($pdo, $product_id) {
     <link rel="stylesheet" href="../css/shopstyle.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-                /* Dashboard-style wishlist styles */
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body.user-area {
+            font-family: 'Noto Sans', sans-serif;
+            color: #333;
+            background-color: #f5f5f7;
+            min-height: 100vh;
+        }
+        
+        /* Container styles */
+        .container {
+            max-width: 1200px;
+            padding: 0 1rem;
+        }
+        
+        /* Dashboard container */
         .dashboard-container {
             display: grid;
             gap: 1.5rem;
             grid-template-columns: 1fr;
-        }
-
-                /* Make buttons larger on mobile */
-        @media (max-width: 576px) {
-          .btn, button, .nav-link, a.product-link {
-            min-height: 44px;
-            min-width: 44px;
-            padding: 12px 16px;
-          }
+            margin-bottom: 2rem;
         }
         
+        /* Card styling */
         .dashboard-card {
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
             background-color: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             overflow: hidden;
         }
         
         .dashboard-card-header {
-            background-color: #f5f5f7;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            background-color: #f9f9fb;
+            border-bottom: 1px solid #eaeaea;
         }
         
         .dashboard-card-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
             display: flex;
             align-items: center;
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin: 0;
         }
         
         .dashboard-card-header h2 i {
-            margin-right: 0.5rem;
+            margin-right: 0.75rem;
             color: #574b90;
+            font-size: 1.1rem;
         }
         
         .dashboard-card-body {
             padding: 1.5rem;
         }
         
+        /* Dashboard buttons */
         .dashboard-button {
             display: inline-block;
             background-color: #574b90;
             color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
+            padding: 0.625rem 1.25rem;
+            border-radius: 6px;
+            font-weight: 500;
             text-decoration: none;
+            transition: all 0.2s ease;
             margin-top: 1rem;
-            transition: background-color 0.2s;
         }
         
         .dashboard-button:hover {
             background-color: #483d8b;
+            transform: translateY(-1px);
         }
         
+        /* Wishlist table */
         .wishlist-table {
             width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .wishlist-table th, 
-        .wishlist-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e5e7eb;
+            border-collapse: separate;
+            border-spacing: 0;
         }
         
         .wishlist-table th {
+            text-align: left;
+            padding: 1rem;
             font-weight: 600;
-            color: #4b5563;
+            color: #666;
+            border-bottom: 1px solid #eaeaea;
+            background-color: #f9f9fb;
+            font-size: 0.9rem;
         }
         
+        .wishlist-table td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .wishlist-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* Column widths */
+        .wishlist-table th:nth-child(1),
+        .wishlist-table td:nth-child(1) {
+            width: 45%;
+        }
+        
+        .wishlist-table th:nth-child(2),
+        .wishlist-table td:nth-child(2) {
+            width: 15%;
+        }
+        
+        .wishlist-table th:nth-child(3),
+        .wishlist-table td:nth-child(3) {
+            width: 20%;
+        }
+        
+        .wishlist-table th:nth-child(4),
+        .wishlist-table td:nth-child(4) {
+            width: 20%;
+        }
+        
+        /* Product info styling */
         .product-info {
             display: flex;
             align-items: center;
@@ -158,9 +211,11 @@ function getProductRating($pdo, $product_id) {
         .product-image {
             width: 60px;
             height: 60px;
-            margin-right: 1rem;
+            border-radius: 6px;
             overflow: hidden;
-            border-radius: 4px;
+            background-color: #f5f5f7;
+            margin-right: 1rem;
+            flex-shrink: 0;
         }
         
         .product-image img {
@@ -169,30 +224,70 @@ function getProductRating($pdo, $product_id) {
             object-fit: cover;
         }
         
+        .product-name {
+            flex: 1;
+            min-width: 0;
+        }
+        
         .product-name h3 {
             font-size: 1rem;
             font-weight: 500;
             margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #333;
         }
         
+        /* Price styling */
+        .product-price {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.05rem;
+        }
+        
+        /* Ratings */
+        .rating {
+            display: flex;
+            align-items: center;
+        }
+        
+        .rating i {
+            color: #FFD700;
+            font-size: 0.9rem;
+            margin-right: 1px;
+        }
+        
+        .rating-count {
+            margin-left: 5px;
+            color: #777;
+            font-size: 0.85rem;
+        }
+        
+        /* Buttons */
         .product-actions {
             display: flex;
             gap: 0.5rem;
-            flex-direction: column;
         }
         
-        .product-actions button {
-            padding: 0.5rem;
-            border-radius: 4px;
+        .add-to-cart-btn, 
+        .wishlist-remove-btn {
             border: none;
+            border-radius: 6px;
+            padding: 0.625rem;
             cursor: pointer;
+            transition: all 0.2s ease;
             font-size: 0.875rem;
-            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .add-to-cart-btn {
             background-color: #574b90;
             color: white;
+            min-width: 36px;
+            height: 36px;
         }
         
         .add-to-cart-btn:hover {
@@ -202,45 +297,122 @@ function getProductRating($pdo, $product_id) {
         .wishlist-remove-btn {
             background-color: #f3f4f6;
             color: #4b5563;
+            display: flex;
+            align-items: center;
+            padding: 0.625rem 0.875rem;
+        }
+        
+        .wishlist-remove-btn i {
+            margin-right: 0.375rem;
         }
         
         .wishlist-remove-btn:hover {
             background-color: #e5e7eb;
         }
         
+        /* Empty wishlist */
         .empty-wishlist {
+            padding: 3rem 1rem;
             text-align: center;
-            padding: 2rem;
+        }
+        
+        .empty-wishlist p {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
         }
         
         .empty-wishlist .btn {
-            display: inline-block;
             background-color: #574b90;
             color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 500;
             text-decoration: none;
+            transition: all 0.2s ease;
         }
         
+        .empty-wishlist .btn:hover {
+            background-color: #483d8b;
+        }
+        
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 4px;
+            background-color: #333;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+            font-size: 0.875rem;
+            max-width: 300px;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .notification.success {
+            background-color: rgba(52, 199, 89, 0.9);
+        }
+        
+        .notification.error {
+            background-color: rgba(255, 59, 48, 0.9);
+        }
+        
+        /* Responsive styles */
         @media (max-width: 768px) {
+            .dashboard-card-header {
+                padding: 1rem;
+            }
+            
+            .dashboard-card-body {
+                padding: 1rem;
+            }
+            
             .wishlist-table thead {
                 display: none;
             }
             
             .wishlist-table tbody tr {
-                display: block;
+                display: grid;
+                grid-template-columns: 1fr;
                 padding: 1rem 0;
-                border-bottom: 1px solid #e5e7eb;
+                border-bottom: 1px solid #eaeaea;
+            }
+            
+            .wishlist-table tbody tr:last-child {
+                border-bottom: none;
             }
             
             .wishlist-table td {
-                display: block;
-                border: none;
                 padding: 0.5rem 1rem;
+                border-bottom: none;
+            }
+            
+            .wishlist-table td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                display: block;
+                margin-bottom: 0.25rem;
+                color: #666;
+                font-size: 0.85rem;
             }
             
             .product-info {
-                align-items: flex-start;
+                margin-bottom: 0.5rem;
+            }
+            
+            .product-actions {
+                justify-content: flex-start;
+                margin-top: 0.5rem;
             }
         }
     </style>
@@ -261,7 +433,7 @@ function getProductRating($pdo, $product_id) {
                     <h2><i class="fas fa-heart"></i> Wishlist Summary</h2>
                 </div>
                 <div class="dashboard-card-body">
-                    <p>You have <strong><?php echo $wishlist_count; ?></strong> items in your wishlist.</p>
+                    <p>You have <strong><?php echo $wishlist_count; ?></strong> <?php echo $wishlist_count == 1 ? 'item' : 'items'; ?> in your wishlist.</p>
                     <a href="../shop.php" class="dashboard-button">Continue Shopping</a>
                 </div>
             </div>
@@ -288,19 +460,25 @@ function getProductRating($pdo, $product_id) {
                                         $rating = getProductRating($pdo, $product['id']);
                                     ?>
                                     <tr class="wishlist-item" data-product-id="<?php echo $product['id']; ?>">
-                                        <td class="product-info">
+                                        <td class="product-info" data-label="Product">
                                             <div class="product-image">
-                                                <img src="<?php echo '../'. htmlspecialchars($product['image']); ?>" 
-                                                     alt="<?php echo htmlspecialchars($product['name']); ?>">
+                                                <?php if (!empty($product['image'])): ?>
+                                                    <img src="<?php echo '../'. htmlspecialchars($product['image']); ?>" 
+                                                         alt="<?php echo htmlspecialchars($product['name']); ?>">
+                                                <?php else: ?>
+                                                    <div class="no-image">
+                                                        <i class="fas fa-image"></i>
+                                                    </div>
+                                                <?php endif; ?>
                                             </div>
                                             <div class="product-name">
                                                 <h3><?php echo htmlspecialchars($product['name']); ?></h3>
                                             </div>
                                         </td>
-                                        <td class="product-price">
-                                            $<?php echo htmlspecialchars(number_format($product['price'], 2)); ?>
+                                        <td class="product-price" data-label="Price">
+                                            $<?php echo number_format($product['price'], 2); ?>
                                         </td>
-                                        <td class="product-rating">
+                                        <td class="product-rating" data-label="Rating">
                                             <div class="rating" title="<?php echo $rating['average']; ?> stars">
                                                 <?php for($i = 1; $i <= 5; $i++): ?>
                                                     <i class="fa<?php echo $i <= $rating['average'] ? 's' : 'r'; ?> fa-star"></i>
@@ -308,7 +486,7 @@ function getProductRating($pdo, $product_id) {
                                                 <span class="rating-count">(<?php echo $rating['count']; ?>)</span>
                                             </div>
                                         </td>
-                                        <td class="product-actions">
+                                        <td class="product-actions" data-label="Actions">
                                             <button class="add-to-cart-btn" 
                                                     data-product-id="<?php echo $product['id']; ?>"
                                                     data-product-name="<?php echo htmlspecialchars($product['name']); ?>"
@@ -327,8 +505,8 @@ function getProductRating($pdo, $product_id) {
                         </div>
                     <?php else: ?>
                         <div class="empty-wishlist">
-                            <p class="text-center text-lg">Your wishlist is empty</p>
-                            <a href="../shop.php" class="btn mt-4">Shop Now</a>
+                            <p>Your wishlist is empty</p>
+                            <a href="../shop.php" class="btn">Shop Now</a>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -341,6 +519,32 @@ function getProductRating($pdo, $product_id) {
     
     <!-- Add wishlist-specific JavaScript -->
     <script>
+        // Notification function
+        function showNotification(message, type = 'success') {
+            // Remove any existing notifications
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(notif => notif.remove());
+            
+            // Create new notification
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Show notification with small delay for animation
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            // Hide and remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
     document.addEventListener('DOMContentLoaded', function() {
         // Handle remove from wishlist button clicks
         const removeButtons = document.querySelectorAll('.wishlist-remove-btn');
@@ -359,30 +563,19 @@ function getProductRating($pdo, $product_id) {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Remove item from page
-                        const item = this.closest('.wishlist-item');
-                        item.remove();
+                        // Show notification
+                        showNotification('Item removed from wishlist', 'success');
                         
-                        // Update wishlist count
-                        const wishlistCount = document.querySelectorAll('.wishlist-item').length;
-                        const countElement = document.querySelector('.dashboard-card-body p strong');
-                        if (countElement) {
-                            countElement.textContent = wishlistCount;
-                        }
-                        
-                        // Show empty message if no items left
-                        if (wishlistCount === 0) {
-                            const tableContainer = document.querySelector('.wishlist-items');
-                            tableContainer.innerHTML = `
-                                <div class="empty-wishlist">
-                                    <p class="text-center text-lg">Your wishlist is empty</p>
-                                    <a href="../shop.php" class="btn mt-4">Shop Now</a>
-                                </div>
-                            `;
-                        }
+                        // Reload page after a short delay
+                        setTimeout(() => location.reload(), 800);
+                    } else {
+                        showNotification('Error removing item', 'error');
                     }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Error removing item', 'error');
+                });
             });
         });
         
@@ -392,7 +585,10 @@ function getProductRating($pdo, $product_id) {
             button.addEventListener('click', function() {
                 const productId = this.getAttribute('data-product-id');
                 const productName = this.getAttribute('data-product-name');
-                const productPrice = this.getAttribute('data-product-price');
+                
+                // Show user feedback immediately
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                this.disabled = true;
                 
                 // Send add to cart request
                 fetch('../api/cart_api.php', {
@@ -402,48 +598,62 @@ function getProductRating($pdo, $product_id) {
                     },
                     body: `action=add&product_id=${productId}&quantity=1`
                 })
-                .then(response => response.json())
+                .then(response => {
+                    // Check if response is valid JSON
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json();
+                    }
+                    throw new Error('Invalid response format');
+                })
                 .then(data => {
+                    // Reset button
+                    this.innerHTML = '<i class="fas fa-shopping-cart"></i>';
+                    this.disabled = false;
+                    
                     if (data.success) {
-                        // Show success notification
                         showNotification(`${productName} added to cart!`, 'success');
-                        window.alert(data.message);
                         
                         // Update cart count if needed
                         if (typeof updateCartCounter === 'function') {
                             updateCartCounter(data.cart_count);
                         }
                     } else {
-                        showNotification('Failed to add item to cart', 'error');
-                        console.log(data.message);
+                        console.error('API Error:', data);
+                        showNotification(data.message || 'Failed to add item to cart', 'error');
                     }
                 })
                 .catch(error => {
+                    // Reset button
+                    this.innerHTML = '<i class="fas fa-shopping-cart"></i>';
+                    this.disabled = false;
+                    
                     console.error('Error:', error);
-                    showNotification('Failed to add item to cart', 'error');
+                    
+                    // Try alternative endpoint if the first one failed
+                    fetch('../cart_api.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `action=add&product_id=${productId}&quantity=1`
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showNotification(`${productName} added to cart!`, 'success');
+                        } else {
+                            showNotification(data.message || 'Failed to add item to cart', 'error');
+                        }
+                    })
+                    .catch(e => {
+                        showNotification('Network error adding item to cart', 'error');
+                    });
                 });
             });
         });
         
-        // Notification function
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.classList.add('show');
-            }, 10);
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => {
-                    notification.remove();
-                }, 300);
-            }, 3000);
-        }
+        
     });
     </script>
 </body>
