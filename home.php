@@ -34,7 +34,7 @@ require_once 'config/connect_db.php';
 
             /* Fix scroll snap on mobile */
             .snap-container {
-                scroll-snap-type: y proximity; /* Less strict snapping for mobile */
+                scroll-snap-type: y proximity; 
             }
             
             /* Improve touch targets */
@@ -298,10 +298,10 @@ require_once 'config/connect_db.php';
                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6 max-sm:p-4">
                                 <div class="flex justify-between items-end">
                                     <h2 class="text-2xl font-bold text-white uppercase max-sm:text-xl">
-                                        Pink suit jacket
+                                        Arachno-Bot
                                     </h2>
                                     <p class="text-4xl font-bold text-white max-sm:text-3xl">
-                                        $105
+                                        $670
                                     </p>
                                 </div>
                             </div>
@@ -319,10 +319,10 @@ require_once 'config/connect_db.php';
                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                                 <div class="flex justify-between items-end">
                                     <h2 class="text-xl font-bold text-white uppercase max-sm:text-lg">
-                                        White hoodie
+                                        Titanfall Unit
                                     </h2>
                                     <p class="text-3xl font-bold text-white max-sm:text-2xl">
-                                        $50
+                                        $899
                                     </p>
                                 </div>
                             </div>
@@ -340,10 +340,10 @@ require_once 'config/connect_db.php';
                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                                 <div class="flex justify-between items-end">
                                     <h2 class="text-lg font-bold text-white uppercase max-sm:text-base">
-                                        Blue cowboy hat
+                                        Synapse Sneakers
                                     </h2>
                                     <p class="text-2xl font-bold text-white max-sm:text-xl">
-                                        $25
+                                        $650
                                     </p>
                                 </div>
                             </div>
@@ -360,10 +360,10 @@ require_once 'config/connect_db.php';
                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                                 <div class="flex justify-between items-end">
                                     <h2 class="text-lg font-bold text-white uppercase max-sm:text-base">
-                                        Black shirt
+                                        Crystalline Shard Heels
                                     </h2>
                                     <p class="text-2xl font-bold text-white max-sm:text-xl">
-                                        $15
+                                        $306
                                     </p>
                                 </div>
                             </div>
