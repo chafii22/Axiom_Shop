@@ -85,5 +85,5 @@ Axiom_Shop/
 Contact
 Feel free to reach out for internship opportunities!
 
-Email: fchafii@gmail.com
+Email: fchafii05@gmail.com
 LinkedIn: ferdaouss chafii
