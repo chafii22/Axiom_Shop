@@ -73,6 +73,8 @@ Axiom_Shop/
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
+```
+
 ## Future Enhancements
 
 - Frontend enhancement
